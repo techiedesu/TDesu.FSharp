@@ -2,7 +2,7 @@
 
 [![NuGet](https://img.shields.io/nuget/v/TDesu.FSharp.svg)](https://www.nuget.org/packages/TDesu.FSharp)
 [![Build](https://github.com/techiedesu/TDesu.FSharp/actions/workflows/ci.yml/badge.svg)](https://github.com/techiedesu/TDesu.FSharp/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Unlicense](https://img.shields.io/badge/License-Unlicense-blue.svg)](https://unlicense.org)
 
 Practical F# utility library. Extends FSharp.Core with the functions you keep rewriting.
 
@@ -278,6 +278,10 @@ match NonEmptyString.create input with
 - **No dependencies** -- only FSharp.Core
 - **XML docs on all public APIs** -- works with IDE tooltips and `fsdocs`
 
+## Acknowledgments
+
+Built with assistance from [Claude](https://claude.ai) (Anthropic).
+
 ## License
 
-[MIT](LICENSE)
+[Unlicense](LICENSE)
