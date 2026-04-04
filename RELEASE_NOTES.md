@@ -1,32 +1,76 @@
-## 1.1.0
-
-- **Breaking**: Removed `[<AutoOpen>]` from all modules — explicit namespace imports required
-- New namespace layout: `TDesu.FSharp.Tasks`, `.Collections`, `.IO`, `.Concurrency`, `.Resilience`, `.Hashing`, `.Buffers`, `.Builders`
-- Core modules (`String`, `Option`, `Result`, `Guard`, numeric parsing) remain under `TDesu.FSharp`
-- Operators (`^`, `%`, `konst`, `isNotNull`, etc.) moved to `TDesu.FSharp.Operators`
-- Merged 3 builder files into single `TDesu.FSharp.Builders` module
-- Moved `(|Null|_|)` active pattern into `ActivePatterns.Ref`
-- Removed duplicate `unitTask` (use `Task.asUnit`)
-- License changed from MIT to Unlicense
-
 ## 1.0.0
 
-- Initial release as standalone package
-- Operators: `^`, `%`, `konst`
-- String, Option, Result, Task, TaskResult modules
-- ResizeArray functional wrappers
-- Seq safe aggregation (`tryMax`, `tryMin`, `tryAverage`)
-- Dictionary helpers
-- Parse active patterns (Int, Double, Bool, Guid, DateTimeOffset)
-- tryParse extensions for all numeric types
-- Guard module for argument validation
-- Disposable helpers (`create`, `combine`, `deferStack`, `tempFile`)
-- NonEmptyString value type
-- BoundedDict / BoundedSet collections
-- Bytes utilities (XOR, concat, constant-time comparison)
-- ArrayPool helpers
-- ContentHash (SHA256, MD5)
-- TemporaryFileStream
-- Resilience module (retry with backoff)
-- Computation expressions: `result {}`, `maybe {}`, `taskResult {}`
-- Fable compatibility (source-included NuGet)
+Initial public release.
+
+### Core
+- Operators: `^` (apply), `%` (ignore), `always`, `tee`, `swap`, `icast`/`ecast`
+- Guard: `notNull`, `notEmpty`, `inRange`, `positive`
+- UnixTime: cached high-resolution `seconds`/`milliseconds`
+- String: 25+ pipeable wrappers (`contains`, `split`, `replace`, `truncate`, `toOption`, ...)
+- Option: `toResult`, `zip`, `map2`/`map3`, `tee`, `ofString`
+- Result: `defaultValue`, `orElse`, `zip`, `requireTrue`, `catch`, `tee`/`teeError`
+- Validation: applicative error accumulation with `and!` support
+- NumericParsing: `tryParse` for Int16–Int64, Double, Single, Decimal, Byte, Bool, Guid, DateTimeOffset
+- Clock: `IClock` interface, `SystemClock`, `FakeClock` for testing
+- StateMachine: lightweight FSM with declarative builder
+
+### Tasks
+- Task: `map`, `bind`, `zip`/`zip3`, `catch`, `singleton`, `fireAndForget`, `parallelThrottle`
+- TaskResult: `map`, `bind`, `mapError`, `defaultValue`, `tee`/`teeError`
+- TaskGroup: structured concurrency with cancellation
+
+### Collections
+- Dictionary: `tryGetValue`, `getOrDefault`
+- ResizeArray: full functional wrapper (`map`, `filter`, `fold`, `sort`, `tryFind`, ...)
+- Seq/List: `tryMax`, `tryMin`, `tryAverage`
+- Stack: `tryPeek`, `push`, `pop`, `reverse`
+
+### Concurrency
+- AtomicInt / AtomicInt64: thread-safe counters
+- BoundedDict / BoundedQueue: auto-evicting bounded collections
+- Signal: one-shot async notification
+- PeriodicTimer: background recurring work
+- ChannelWorker: sequential background processor
+- SlidingWindowLimiter: rate limiting
+
+### Resilience
+- Retry: exponential backoff, fixed delay
+- CircuitBreaker: threshold + cooldown
+- Timeout: hard deadline with linked cancellation
+- Memoize: sync/async with optional TTL
+- Saga: transactional orchestration with compensation
+
+### IO
+- Env: `getVar`, `requireVar`, `getVarOr`
+- Disposable: `deferStack`, `create`, `combine`, `createOnce`
+- TemporaryFileStream: auto-deleting temp file backed stream
+- File / Directory helpers
+
+### Buffers
+- Bytes: `xor`, `concat2`/`3`/`4`, `constantTimeEquals`, `slice`, `fill`
+- ArrayPool: `useBytes`, `usePooled`, `withCopy`
+
+### Hashing
+- ContentHash: SHA256, SHA1, MD5 (hex output)
+- Hash: `combine2`/`3`/`4`, `ofSeq`, `ofArray`, `ofList`
+- CollectionComparer: structural equality for byte[], arrays, lists
+
+### ActivePatterns
+- Parse: `Int`, `Int64`, `Double`, `Decimal`, `Bool`, `Guid`, `DateTimeOffset`
+- String: `NullOrWhiteSpace`, `Empty`, `WhiteSpace`, `StartsWithAny`
+
+### Builders
+- `result {}` — synchronous Result pipelines
+- `option {}` — Option pipelines (binds Option and ValueOption)
+- `taskResult {}` — async Result pipelines (binds Task<Result>, Result, Task)
+- `validation {}` — applicative validation with `and!`
+
+### Types
+- NonEmptyString: validated non-null/non-empty string
+- ApiResponse: `ok`/`error`/`ofResult` wrapper
+
+### Other
+- Fable compatible (sources included in nupkg)
+- netstandard2.1 target
+- XML docs on all public APIs
+- Unlicense
