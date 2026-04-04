@@ -7,6 +7,9 @@ open System.IO
 open TDesu.FSharp.Operators
 
 #if !FABLE_COMPILER
+/// <namespacedoc>
+///   <summary>I/O utilities: Env, File, Directory, Disposable (deferStack), TemporaryFileStream.</summary>
+/// </namespacedoc>
 [<RequireQualifiedAccess>]
 module File =
     /// <summary>

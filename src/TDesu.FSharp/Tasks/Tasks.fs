@@ -10,6 +10,9 @@ open TDesu.FSharp.Operators
 /// <remarks>
 /// All functions are <c>inline</c> for zero-overhead abstractions. Thread-safe by design.
 /// </remarks>
+/// <namespacedoc>
+///   <summary>Task and TaskResult combinators, TaskGroup (structured concurrency), parallelThrottle, fireAndForget.</summary>
+/// </namespacedoc>
 module Task =
     /// Converts a non-generic Task to Task&lt;unit&gt;.
     /// <param name="t">The non-generic task to convert.</param>

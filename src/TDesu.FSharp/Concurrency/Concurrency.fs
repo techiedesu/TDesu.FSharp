@@ -9,6 +9,9 @@ open TDesu.FSharp.IO
 /// <summary>
 /// CancellationToken helpers — reduces boilerplate for timeout + linked patterns.
 /// </summary>
+/// <namespacedoc>
+///   <summary>Concurrency primitives: AtomicInt/Int64, BoundedDict, BoundedQueue, Signal, PeriodicTimer, ChannelWorker, SlidingWindowLimiter.</summary>
+/// </namespacedoc>
 [<RequireQualifiedAccess>]
 module CancellationToken =
     open System.Threading

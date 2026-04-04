@@ -8,6 +8,9 @@ open Microsoft.FSharp.Core
 #nowarn "0042"
 #endif
 
+/// <namespacedoc>
+///   <summary>Core utilities: operators, Guard, UnixTime, String, Option, Result, Validation, Clock, StateMachine, NumericParsing.</summary>
+/// </namespacedoc>
 module Operators =
 
     /// <summary>

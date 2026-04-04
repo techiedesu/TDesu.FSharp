@@ -6,6 +6,9 @@ namespace TDesu.FSharp.Buffers
 open System
 open System.Buffers
 
+/// <namespacedoc>
+///   <summary>Buffer utilities: Bytes (xor, concat, constantTimeEquals), ArrayPool helpers.</summary>
+/// </namespacedoc>
 [<RequireQualifiedAccess>]
 module Bytes =
 

@@ -1,5 +1,8 @@
 namespace TDesu.FSharp.Types
 
+/// <namespacedoc>
+///   <summary>Domain types: NonEmptyString (validated string), ApiResponse (Result-to-HTTP bridge).</summary>
+/// </namespacedoc>
 /// Standard API response wrapper. Bridges HTTP responses and F# Result.
 [<RequireQualifiedAccess>]
 module ApiResponse =

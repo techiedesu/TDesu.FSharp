@@ -8,6 +8,9 @@ open TDesu.FSharp.Operators
 /// <summary>
 /// Retry combinators with exponential backoff and fixed delay strategies.
 /// </summary>
+/// <namespacedoc>
+///   <summary>Resilience patterns: Retry (exponential backoff), CircuitBreaker, Timeout, Memoize (with TTL), Saga (transactional orchestration).</summary>
+/// </namespacedoc>
 [<RequireQualifiedAccess>]
 module Retry =
     /// <summary>

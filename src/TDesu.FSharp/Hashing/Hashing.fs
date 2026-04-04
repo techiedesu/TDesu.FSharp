@@ -8,6 +8,9 @@ open System.Collections.Generic
 open System.Security.Cryptography
 open System.Text
 
+/// <namespacedoc>
+///   <summary>Hashing utilities: ContentHash (SHA256/SHA1/MD5), Hash.combine, CollectionComparer.</summary>
+/// </namespacedoc>
 /// Pipeline-friendly hash combining using System.HashCode.
 [<RequireQualifiedAccess>]
 module Hash =

@@ -8,6 +8,9 @@ open System.IO
 open TDesu.FSharp
 open TDesu.FSharp.Operators
 
+/// <namespacedoc>
+///   <summary>Collection extensions: Dictionary, ResizeArray, Seq, List, Stack helpers.</summary>
+/// </namespacedoc>
 [<RequireQualifiedAccess>]
 module Dictionary =
     /// Gets the value for the given key; throws if key is missing.

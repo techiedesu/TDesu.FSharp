@@ -3,6 +3,9 @@ namespace TDesu.FSharp.ActivePatterns
 open System
 open TDesu.FSharp
 
+/// <namespacedoc>
+///   <summary>Active patterns for parsing and string matching: Parse.Int/Double/Guid/Bool, String.NullOrWhiteSpace/Empty.</summary>
+/// </namespacedoc>
 module String =
 
     /// Matches when the string has zero length. Does not match null.
