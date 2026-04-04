@@ -1,0 +1,174 @@
+open System
+open System.Diagnostics
+open System.IO
+
+// ── Paths ──────────────────────────────────────────────────────────────
+[<Literal>]
+let solution = "TDesu.FSharp.slnx"
+
+[<Literal>]
+let testProj = "tests/TDesu.FSharp.Tests/TDesu.FSharp.Tests.fsproj"
+
+[<Literal>]
+let benchProj = "benchmarks/TDesu.FSharp.Benchmarks/TDesu.FSharp.Benchmarks.fsproj"
+
+[<Literal>]
+let artifactsDir = "artifacts"
+
+// ── Guards ──────────────────────────────────────────────────────────────
+let scriptDir = __SOURCE_DIRECTORY__
+
+do
+    if not (File.Exists(Path.Combine(scriptDir, solution))) then
+        eprintfn "ERROR: %s not found — run this script from the repo root." solution
+        exit 1
+
+// ── Helpers ─────────────────────────────────────────────────────────────
+let runCapture (cmd: string) (args: string) =
+    let psi = ProcessStartInfo(FileName = cmd, Arguments = args, UseShellExecute = false,
+                               RedirectStandardOutput = true, WorkingDirectory = scriptDir)
+    use p = Process.Start(psi)
+    let output = p.StandardOutput.ReadToEnd()
+    p.WaitForExit()
+    output.Trim()
+
+/// Resolve a local dotnet tool DLL from the NuGet global-packages cache.
+/// Workaround for .NET 10 SDK bug where `dotnet <tool>` shim fails.
+let resolveToolDll (toolId: string) (version: string) (tfm: string) =
+    let raw = runCapture "dotnet" "nuget locals global-packages --list"
+    let prefix = "global-packages: "
+    let pkgDir =
+        match raw.IndexOf(prefix) with
+        | -1 -> failwith $"Cannot resolve NuGet global-packages path from: {raw}"
+        | i  -> raw.Substring(i + prefix.Length).Trim()
+    let toolCmd = toolId.Replace("-tool", "")
+    let dll = Path.Combine(pkgDir, toolId, version, "tools", tfm, "any", $"{toolCmd}.dll")
+    if not (File.Exists dll) then
+        runCapture "dotnet" "tool restore" |> ignore
+        if not (File.Exists dll) then
+            failwith $"Tool DLL not found: {dll}"
+    dll
+
+let color c (msg: string) =
+    let prev = Console.ForegroundColor
+    try
+        Console.ForegroundColor <- c
+        Console.WriteLine(msg)
+    finally
+        Console.ForegroundColor <- prev
+
+let run (cmd: string) (args: string) =
+    let psi = ProcessStartInfo(FileName = cmd, Arguments = args, UseShellExecute = false, WorkingDirectory = scriptDir)
+    use p = Process.Start(psi)
+    use _cancel = Console.CancelKeyPress.Subscribe(fun e ->
+        e.Cancel <- true
+        try p.Kill(true) with _ -> ())
+    p.WaitForExit()
+    p.ExitCode
+
+let runOrExit cmd args =
+    let code = run cmd args
+    if code <> 0 then
+        color ConsoleColor.Red $"FAILED: {cmd} {args} (exit code {code})"
+        exit code
+    code
+
+let deleteDirs (dirs: string list) =
+    for d in dirs do
+        let full = Path.Combine(scriptDir, d)
+        if Directory.Exists(full) then
+            Directory.Delete(full, true)
+            printfn "Deleted %s" d
+
+let deleteRecursive (name: string) =
+    Directory.EnumerateDirectories(scriptDir, name, SearchOption.AllDirectories)
+    |> Seq.iter (fun d ->
+        Directory.Delete(d, true)
+        printfn "Deleted %s" (Path.GetRelativePath(scriptDir, d)))
+
+// ── Commands ────────────────────────────────────────────────────────────
+let cmdBuild () =
+    color ConsoleColor.Cyan "Building solution (Release)..."
+    runOrExit "dotnet" $"build {solution} -c Release"
+
+let cmdTest () =
+    color ConsoleColor.Cyan "Running tests..."
+    runOrExit "dotnet" $"test {solution} -c Release"
+
+let cmdBench () =
+    color ConsoleColor.Cyan "Running benchmarks..."
+    runOrExit "dotnet" $"run --project {benchProj} -c Release"
+
+let resolveFsdocs () =
+    let manifest = File.ReadAllText(Path.Combine(scriptDir, ".config/dotnet-tools.json"))
+    let vStart = manifest.IndexOf("\"version\": \"") + "\"version\": \"".Length
+    let vEnd = manifest.IndexOf("\"", vStart)
+    let fsdocsVersion = manifest.Substring(vStart, vEnd - vStart)
+    resolveToolDll "fsdocs-tool" fsdocsVersion "net8.0"
+
+let cmdDocs () =
+    color ConsoleColor.Cyan "Building docs..."
+    let fsdocs = resolveFsdocs ()
+    runOrExit "dotnet" $"\"{fsdocs}\" build --clean --output docs/output --properties Configuration=Release --parameters root /TDesu.FSharp/"
+
+let cmdDocsWatch () =
+    color ConsoleColor.Cyan "Watching docs..."
+    let fsdocs = resolveFsdocs ()
+    runOrExit "dotnet" $"\"{fsdocs}\" watch --properties Configuration=Release --parameters root /TDesu.FSharp/"
+
+let cmdPack () =
+    color ConsoleColor.Cyan $"Packing into ./{artifactsDir}..."
+    runOrExit "dotnet" $"pack {solution} -c Release -o {artifactsDir}"
+
+let cmdClean () =
+    color ConsoleColor.Cyan "Cleaning..."
+    run "dotnet" $"clean {solution}" |> ignore
+    deleteRecursive "bin"
+    deleteRecursive "obj"
+    deleteDirs [ artifactsDir; "output" ]
+    color ConsoleColor.Green "Clean complete."
+    0
+
+let cmdWatch () =
+    color ConsoleColor.Cyan "Watching tests..."
+    runOrExit "dotnet" $"watch test --project {testProj}"
+
+let showHelp () =
+    printfn ""
+    printfn "Usage: dotnet fsi manage.fsx <command>"
+    printfn ""
+    printfn "Commands:"
+    printfn "  build   Build solution (Release)"
+    printfn "  test    Run tests"
+    printfn "  bench   Run benchmarks"
+    printfn "  docs             Build fsdocs documentation"
+    printfn "  docs --watch     Watch & live-reload docs"
+    printfn "  pack    Pack NuGet into ./artifacts"
+    printfn "  clean   Clean all build outputs"
+    printfn "  watch   Watch & re-run tests on change"
+    printfn ""
+    0
+
+// ── Entry point ─────────────────────────────────────────────────────────
+let args = fsi.CommandLineArgs // argv.[0] = script name
+let command = if args.Length > 1 then args.[1].ToLowerInvariant() else ""
+let hasFlag (flag: string) = args |> Array.exists (fun a -> a.ToLowerInvariant() = flag)
+
+let exitCode =
+    match command with
+    | "build" -> cmdBuild ()
+    | "test"  -> cmdTest ()
+    | "bench" -> cmdBench ()
+    | "docs"  -> if hasFlag "--watch" then cmdDocsWatch () else cmdDocs ()
+    | "pack"  -> cmdPack ()
+    | "clean" -> cmdClean ()
+    | "watch" -> cmdWatch ()
+    | other ->
+        if other <> "" then
+            color ConsoleColor.Red $"Unknown command: {other}"
+        showHelp ()
+
+if exitCode = 0 && command <> "" then
+    color ConsoleColor.Green "Done."
+
+exit exitCode

@@ -1,0 +1,24 @@
+<Project>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <WarningLevel>5</WarningLevel>
+        <!-- 1182=unused vars, 3218=arg name mismatch, 3366=deprecated .[i], 3390/3391=xmldoc issues, 3395=implicit conversions -->
+        <OtherFlags>--warnon:1182 --warnon:3218 --warnon:3366 --warnon:3390 --warnon:3391 --warnon:3395</OtherFlags>
+        <NoWarn>FS3511;$(NoWarn)</NoWarn>
+        <WarningsNotAsErrors>NU1902;NU1903</WarningsNotAsErrors>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)' == 'Fable'">
+        <DefineConstants>$(DefineConstants);FABLE_COMPILER</DefineConstants>
+    </PropertyGroup>
+
+    <!-- fsdocs configuration -->
+    <PropertyGroup>
+        <FsDocsNavBarPosition>fixed-left</FsDocsNavBarPosition>
+        <FsDocsReleaseNotesLink>https://github.com/techiedesu/TDesu.FSharp/blob/main/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
+        <FsDocsLicenseLink>https://github.com/techiedesu/TDesu.FSharp/blob/main/LICENSE</FsDocsLicenseLink>
+        <FsDocsSourceRepository>https://github.com/techiedesu/TDesu.FSharp/tree/main</FsDocsSourceRepository>
+    </PropertyGroup>
+</Project>

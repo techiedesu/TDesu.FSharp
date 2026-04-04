@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <RootNamespace>TDesu.FSharp.Sample</RootNamespace>
+        <IsPackable>false</IsPackable>
+        <Configurations>Debug;Release;Fable</Configurations>
+        <Platforms>AnyCPU</Platforms>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Log.fs" />
+        <Compile Include="Domain.fs" />
+        <Compile Include="Providers.fs" />
+        <Compile Include="Services.fs" />
+        <Compile Include="Endpoints.fs" />
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\TDesu.FSharp\TDesu.FSharp.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Falco" />
+    </ItemGroup>
+
+</Project>

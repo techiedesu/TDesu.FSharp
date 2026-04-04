@@ -1,0 +1,4 @@
+/* Hide the header logo image */
+header .start > a > img {
+    display: none;
+}

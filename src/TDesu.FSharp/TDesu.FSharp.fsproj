@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <RootNamespace>TDesu.FSharp</RootNamespace>
+        <Authors>TDesu</Authors>
+        <Description>Generic F# utility library: operators, type extensions, computation expressions, string helpers, task/result combinators.</Description>
+        <PackageTags>fsharp;utilities;common;computation-expressions;task;result;fable</PackageTags>
+        <PackageLicenseExpression>Unlicense</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/techiedesu/TDesu.FSharp</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/techiedesu/TDesu.FSharp</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IsPackable>true</IsPackable>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <!-- SourceLink: navigate to F# source from Rider/VS -->
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <DebugType>embedded</DebugType>
+        <Configurations>Debug;Release;Fable</Configurations>
+        <Platforms>AnyCPU</Platforms>
+    </PropertyGroup>
+
+    <!-- Fable: include sources in nupkg for Fable consumers.
+         Moved into a Target so Rider/VS design-time builds don't see duplicate items for .fs files. -->
+    <Target Name="_IncludeFableSourcesInPack" BeforeTargets="_GetPackageFiles">
+        <ItemGroup>
+            <None Include="*.fsproj" Pack="true" PackagePath="fable/" />
+            <None Include="Core\*.fs" Pack="true" PackagePath="fable/Core/" />
+            <None Include="Collections\*.fs" Pack="true" PackagePath="fable/Collections/" />
+            <None Include="Tasks\*.fs" Pack="true" PackagePath="fable/Tasks/" />
+            <None Include="IO\*.fs" Pack="true" PackagePath="fable/IO/" />
+            <None Include="Concurrency\*.fs" Pack="true" PackagePath="fable/Concurrency/" />
+            <None Include="Buffers\*.fs" Pack="true" PackagePath="fable/Buffers/" />
+            <None Include="ActivePatterns\*.fs" Pack="true" PackagePath="fable/ActivePatterns/" />
+            <None Include="Types\*.fs" Pack="true" PackagePath="fable/Types/" />
+            <None Include="Resilience\*.fs" Pack="true" PackagePath="fable/Resilience/" />
+            <None Include="Hashing\*.fs" Pack="true" PackagePath="fable/Hashing/" />
+            <None Include="Builders\*.fs" Pack="true" PackagePath="fable/Builders/" />
+        </ItemGroup>
+    </Target>
+
+    <ItemGroup>
+        <Compile Include="Core\Core.fs" />
+        <Compile Include="Core\Clock.fs" />
+        <Compile Include="Core\String.fs" />
+        <Compile Include="Core\Options.fs" />
+        <Compile Include="Core\NumericParsing.fs" />
+        <Compile Include="Collections\Collections.fs" />
+        <Compile Include="Tasks\Tasks.fs" />
+        <Compile Include="IO\IO.fs" />
+        <Compile Include="Concurrency\Concurrency.fs" />
+        <Compile Include="Concurrency\ChannelWorker.fs" />
+        <Compile Include="Concurrency\RateLimiting.fs" />
+        <Compile Include="Core\StateMachine.fs" />
+        <Compile Include="Buffers\Buffers.fs" />
+        <Compile Include="ActivePatterns\ActivePatterns.fs" />
+        <Compile Include="IO\TemporaryFileStream.fs" />
+        <Compile Include="Types\Types.fs" />
+        <Compile Include="Core\Validation.fs" />
+        <Compile Include="Resilience\Resilience.fs" />
+        <Compile Include="Hashing\Hashing.fs" />
+        <Compile Include="Builders\Builders.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FSharp.Core" />
+        <PackageReference Include="MinVer" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
+    </ItemGroup>
+
+</Project>

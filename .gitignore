@@ -1,0 +1,31 @@
+## .NET
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+*.userprefs
+*.nupkg
+*.snupkg
+.vs/
+
+## fsdocs
+.fsdocs/
+docs/output/
+
+## BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
+
+## IDE
+.idea/
+*.sln.DotSettings.user
+
+## Claude Code
+.claude/
+
+## Temp
+tmp/
+
+## OS
+Thumbs.db
+.DS_Store

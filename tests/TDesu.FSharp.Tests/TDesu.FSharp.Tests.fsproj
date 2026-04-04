@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+        <RootNamespace>TDesu.FSharp.Tests</RootNamespace>
+        <Configurations>Debug;Release;Fable</Configurations>
+        <Platforms>AnyCPU</Platforms>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="TestHelpers.fs" />
+        <Compile Include="StringTests.fs" />
+        <Compile Include="OptionTests.fs" />
+        <Compile Include="ResultTests.fs" />
+        <Compile Include="TaskTests.fs" />
+        <Compile Include="TaskResultTests.fs" />
+        <Compile Include="BuffersTests.fs" />
+        <Compile Include="BuilderTests.fs" />
+        <Compile Include="TypesTests.fs" />
+        <Compile Include="ResilienceTests.fs" />
+        <Compile Include="HashingTests.fs" />
+        <Compile Include="GuardTests.fs" />
+        <Compile Include="DisposableTests.fs" />
+        <Compile Include="ActorHelpersTests.fs" />
+        <Compile Include="CommonTests.fs" />
+        <Compile Include="OperatorTests.fs" />
+        <Compile Include="PropertyTests.fs" />
+        <Compile Include="ChannelWorkerTests.fs" />
+        <Compile Include="RateLimitingTests.fs" />
+        <Compile Include="StateMachineTests.fs" />
+        <Compile Include="ClockTests.fs" />
+        <Compile Include="ValidationTests.fs" />
+        <Compile Include="EnvTests.fs" />
+        <Compile Include="TaskGroupTests.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\TDesu.FSharp\TDesu.FSharp.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FsCheck" />
+        <PackageReference Include="FsCheck.NUnit" />
+        <PackageReference Include="NUnit" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NUnit3TestAdapter" />
+        <PackageReference Include="coverlet.collector" />
+        <PackageReference Include="JunitXml.TestLogger" />
+    </ItemGroup>
+
+</Project>

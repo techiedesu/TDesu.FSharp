@@ -1,0 +1,19 @@
+<Solution>
+    <Folder Name="/src/">
+        <Project Path="src/TDesu.FSharp/TDesu.FSharp.fsproj" />
+    </Folder>
+    <Folder Name="/tests/">
+        <Project Path="tests/TDesu.FSharp.Tests/TDesu.FSharp.Tests.fsproj" />
+    </Folder>
+    <Configurations>
+        <BuildType Name="Debug" />
+        <BuildType Name="Fable" />
+        <BuildType Name="Release" />
+    </Configurations>
+    <Folder Name="/benchmarks/">
+        <Project Path="benchmarks/TDesu.FSharp.Benchmarks/TDesu.FSharp.Benchmarks.fsproj" />
+    </Folder>
+    <Folder Name="/samples/">
+        <Project Path="samples/CityInfo/CityInfo.fsproj" />
+    </Folder>
+</Solution>

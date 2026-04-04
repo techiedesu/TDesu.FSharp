@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <RootNamespace>TDesu.FSharp.Benchmarks</RootNamespace>
+        <IsPackable>false</IsPackable>
+        <Optimize>true</Optimize>
+        <Configurations>Debug;Release;Fable</Configurations>
+        <Platforms>AnyCPU</Platforms>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="BytesBenchmarks.fs" />
+        <Compile Include="HashBenchmarks.fs" />
+        <Compile Include="CollectionBenchmarks.fs" />
+        <Compile Include="UnixTimeBenchmarks.fs" />
+        <Compile Include="MemoizeBenchmarks.fs" />
+        <Compile Include="StringBenchmarks.fs" />
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\TDesu.FSharp\TDesu.FSharp.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet" />
+    </ItemGroup>
+
+</Project>
