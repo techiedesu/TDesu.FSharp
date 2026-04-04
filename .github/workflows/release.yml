@@ -18,6 +18,12 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Verify tag is reachable
+        run: |
+          git fetch --tags --force
+          git describe --tags --always
+          echo "MinVer should resolve from: $(git tag -l 'v*' --sort=-v:refname | head -1)"
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
