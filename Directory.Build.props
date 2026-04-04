@@ -17,8 +17,8 @@
     <!-- fsdocs configuration -->
     <PropertyGroup>
         <FsDocsNavBarPosition>fixed-left</FsDocsNavBarPosition>
-        <FsDocsReleaseNotesLink>https://github.com/techiedesu/TDesu.FSharp/blob/main/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
-        <FsDocsLicenseLink>https://github.com/techiedesu/TDesu.FSharp/blob/main/LICENSE</FsDocsLicenseLink>
-        <FsDocsSourceRepository>https://github.com/techiedesu/TDesu.FSharp/tree/main</FsDocsSourceRepository>
+        <FsDocsReleaseNotesLink>https://github.com/techiedesu/TDesu.FSharp/blob/master/RELEASE_NOTES.md</FsDocsReleaseNotesLink>
+        <FsDocsLicenseLink>https://github.com/techiedesu/TDesu.FSharp/blob/master/LICENSE</FsDocsLicenseLink>
+        <FsDocsSourceRepository>https://github.com/techiedesu/TDesu.FSharp/tree/master</FsDocsSourceRepository>
     </PropertyGroup>
 </Project>
