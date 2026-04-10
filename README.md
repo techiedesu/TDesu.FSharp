@@ -361,15 +361,13 @@ ApiResponse.ofResult result // auto-convert Result to ApiResponse
 ### State Machine
 
 ```fsharp
-let definition =
-    let b = StateMachine.Builder()
-    b.StateTag(fun s -> match s with Idle -> 0 | Running _ -> 1 | Done -> 2)
-    b.EventTag(fun e -> match e with Start _ -> 0 | Finish -> 1)
-    b.On(0, 0, fun _state event -> StateMachine.goto (Running event.Data) [LogStarted])
-    b.On(1, 1, fun _state _event -> StateMachine.goto Done [LogFinished])
-    b.Build()
+let apply state event =
+    match state, event with
+    | Idle, Start data -> StateMachine.goto (Running data) [ LogStarted ]
+    | Running _, Finish -> StateMachine.goto Done [ LogFinished ]
+    | _ -> StateMachine.fail "invalid transition"
 
-let result = StateMachine.apply definition currentState event
+let result = apply currentState event
 ```
 
 ### Clock

@@ -1,3 +1,9 @@
+## 1.1.0
+
+### Changed
+- StateMachine: removed `Builder`, `Definition`, and `apply` — use plain `match` expressions for transitions
+- StateMachine: `tryApply` now takes `(state, result)` instead of `(definition, state, event)`
+
 ## 1.0.0
 
 Initial public release.
@@ -12,7 +18,7 @@ Initial public release.
 - Validation: applicative error accumulation with `and!` support
 - NumericParsing: `tryParse` for Int16–Int64, Double, Single, Decimal, Byte, Bool, Guid, DateTimeOffset
 - Clock: `IClock` interface, `SystemClock`, `FakeClock` for testing
-- StateMachine: lightweight FSM with declarative builder
+- StateMachine: lightweight FSM helpers (`goto`/`stay`/`fail`/`tryApply`) — use plain `match` for transitions
 
 ### Tasks
 - Task: `map`, `bind`, `zip`/`zip3`, `catch`, `singleton`, `fireAndForget`, `parallelThrottle`
