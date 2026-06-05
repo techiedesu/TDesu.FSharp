@@ -389,10 +389,6 @@ fake.Advance(TimeSpan.FromHours 1.0)
 - **Fable compatible** -- sources included in nupkg for JS/TS transpilation
 - **XML docs on all public APIs** -- works with IDE tooltips and [fsdocs](https://techiedesu.github.io/TDesu.FSharp/)
 
-## Acknowledgments
-
-Built with assistance from [Claude](https://claude.ai) (Anthropic).
-
 ## License
 
 [Unlicense](LICENSE)
