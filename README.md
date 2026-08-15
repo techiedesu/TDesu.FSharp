@@ -56,6 +56,36 @@ UnixTime.seconds ()        // int64, cached high-resolution
 UnixTime.milliseconds ()   // int64
 ```
 
+### Numeric
+
+```fsharp
+Numeric.clamp 0 10 15            // 10
+Numeric.lerp 0.0 10.0 0.5        // 5.0
+Numeric.inverseLerp 0.0 10.0 5.0 // 0.5
+Numeric.isBetween 1 10 10        // true
+Numeric.zero<int>                // 0
+Numeric.one<float>               // 1.0
+```
+
+### Enum
+
+```fsharp
+[<Flags>]
+type Permissions =
+    | None = 0
+    | Read = 1
+    | Write = 2
+    | Execute = 4
+
+let perms = Permissions.Read ||| Permissions.Write
+
+Enum.hasFlag Permissions.Read perms             // true
+Enum.hasFlag Permissions.Execute perms          // false
+Enum.addFlag Permissions.Execute perms          // Read ||| Write ||| Execute
+Enum.removeFlag Permissions.Write perms         // Read
+Enum.addFlagWhen true Permissions.Execute perms // adds only when the condition holds
+```
+
 ### String
 
 ```fsharp
@@ -69,6 +99,14 @@ UnixTime.milliseconds ()   // int64
 ""            |> String.toOption             // None
 "abc"         |> String.countOccurrences "a" // 1
 "hello"       |> String.toUpperInv           // "HELLO"
+
+"GET" |> String.equalsAny StringComparison.OrdinalIgnoreCase [| "get"; "post" |]   // true
+"hello world" |> String.containsAny StringComparison.Ordinal [| "wor"; "xyz" |]    // true
+"file.TXT" |> String.endsWithAny StringComparison.OrdinalIgnoreCase [| ".txt" |]   // true
+
+"x" |> String.equalsAnyChar [| 'x'; 'y' |]        // true
+"a,b" |> String.containsAnyChar [| ','; ';' |]    // true
+"a.txt" |> String.endsWithAnyChar [| 't'; 'z' |]  // true
 ```
 
 ### Option
@@ -84,13 +122,23 @@ Some 42 |> Option.tee (printfn "got %d") // prints, returns Some 42
 Option.ofString "hello"   // Some "hello"
 Option.ofString null       // None
 Option.ofString "  "       // None
+
+Option.tryCast<string> (box "hello")    // Some "hello"
+Option.tryCast<int> (box "hello")       // None
+
+Option.ofPredicate (fun x -> x > 0) 5   // Some 5
+Option.ofPredicate (fun x -> x > 0) -5  // None
+
+// ValueOption mirrors both, for the allocation-free path
+ValueOption.tryCast<string> (box "hello")   // ValueSome "hello"
+ValueOption.ofPredicate (fun x -> x > 0) 5  // ValueSome 5
 ```
 
 ### Result
 
 ```fsharp
 Ok 42  |> Result.defaultValue 0             // 42
-Ok 42  |> Result.valueOr (fun e -> e.Length) // 42
+Ok 42  |> Result.valueOr (fun (e: string) -> e.Length) // 42
 Error "x" |> Result.orElse (Ok 0)           // Ok 0
 
 Result.ofOption "missing" (Some 42)          // Ok 42
@@ -124,6 +172,8 @@ validation {
 ### Task
 
 ```fsharp
+open TDesu.FSharp.Tasks
+
 task { return 21 } |> Task.map ((*) 2)       // Task<42>
 task { return 21 } |> Task.bind (fun v -> task { return v * 2 })
 
@@ -185,8 +235,7 @@ let processOrder orderId = taskResult {
     let! order = fetchOrder orderId           // Task<Result>
     let! items = fetchItems order.Id          // Task<Result>
     do! validateStock items                   // Result
-    let! receipt = chargePayment order.Total  // Task<Result>
-    return receipt
+    return! chargePayment order.Total          // Task<Result> -- tail call, no need to bind first
 }
 ```
 
@@ -220,23 +269,58 @@ match str with
 | _ -> // handle value
 ```
 
+### Comparison Active Patterns
+
+```fsharp
+open TDesu.FSharp.ActivePatterns
+
+let describeAge age =
+    match age with
+    | Lt 13         -> "child"
+    | Between 13 19 -> "teen"
+    | GtEq 65       -> "senior"
+    | _             -> "adult"
+
+let describeRetries retryCount =
+    match retryCount with
+    | Eq 0   -> "never retried"
+    | LtEq 3 -> "still retrying"
+    | _      -> "gave up"
+```
+
 ### Collections
 
 ```fsharp
+open TDesu.FSharp.Collections
+open System.Collections.Generic
+
 // Dictionary
-dict |> Dictionary.tryGetValue "key"        // Some value
-dict |> Dictionary.getOrDefault "key" 0     // value or 0
+let ages = Dictionary<string, int>()
+ages["alice"] <- 30
+ages |> Dictionary.tryGetValue "alice"      // Some 30
+ages |> Dictionary.getOrDefault "bob" 0     // 0
 
 // Safe aggregation
 Seq.tryMax [| 3; 1; 5 |]     // Some 5
 Seq.tryMin Seq.empty<int>    // None
 Seq.tryAverage [ 2.0; 4.0 ]  // Some 3.0
+Seq.tryMaxBy (fun (s: string) -> s.Length) [ "a"; "abc"; "ab" ]  // Some "abc"
+Seq.tryMinBy (fun (s: string) -> s.Length) [ "abc"; "a"; "ab" ]  // Some "a"
 
 // ResizeArray (pipeable wrappers for List<T>)
 ResizeArray.ofList [ 1; 2; 3 ]
 |> ResizeArray.filter (fun x -> x > 1)
 |> ResizeArray.map ((*) 10)
 |> ResizeArray.toArray   // [| 20; 30 |]
+
+ResizeArray.ofList [ 1; 2; 3; 4 ]
+|> ResizeArray.choose (fun x -> if x % 2 = 0 then Some x else None)
+|> ResizeArray.toArray                                           // [| 2; 4 |]
+ResizeArray.ofList [ "a"; "b" ] |> ResizeArray.mapi (fun i x -> $"{i}:{x}") |> ResizeArray.toArray // [| "0:a"; "1:b" |]
+ResizeArray.ofList [ 1; 2; 3 ]    |> ResizeArray.rev                       |> ResizeArray.toArray  // [| 3; 2; 1 |]
+ResizeArray.ofList [ 1; 2; 3; 4 ] |> ResizeArray.partition (fun x -> x % 2 = 0)  // two ResizeArrays: [2;4], [1;3]
+ResizeArray.ofList [ 1; 2; 3 ]    |> ResizeArray.tryFindIndex ((=) 2)           // Some 1
+ResizeArray.ofList [ 1; 2; 3 ]    |> ResizeArray.forall (fun x -> x > 0)        // true
 ```
 
 ### Concurrency
@@ -317,6 +401,13 @@ cleanup.Add(fun () -> log.Info("done"))
 // Temporary file that auto-deletes
 use tfs = new TemporaryFileStream()
 tfs.Write(data, 0, data.Length)
+
+// Bounded stream copy -- stops instead of reading an unbounded body
+task {
+    match! source |> Stream.copyUpTo (10L * 1024L * 1024L) destination ct with
+    | Ok bytesWritten -> log.Info($"wrote {bytesWritten} bytes")
+    | Error e -> log.Error($"payload too large: wrote {e.BytesWritten} of {e.MaxBytes} allowed bytes")
+} |> ignore
 ```
 
 ### Bytes & ArrayPool
@@ -330,6 +421,29 @@ Bytes.constantTimeEquals hash1 hash2      // timing-safe
 
 ArrayPool.useBytes 1024 (fun buf ->
     stream.Read(buf, 0, 1024) |> ignore)
+```
+
+### ValueStringBuilder
+
+Stack-first string builder: writes into a caller-supplied `Span<char>`, renting from `ArrayPool`
+only on overflow. **Restricted use**: it cannot be captured, returned, or passed by value, and it
+has a plain `Dispose()` rather than `IDisposable`, so it's disposed from `try`/`finally`, never
+`use` -- see the XML docs on the type for the rest.
+
+```fsharp
+open TDesu.FSharp.Buffers
+
+let describe (name: string) (count: int) =
+    let buffer = Array.zeroCreate<char> 64
+    let mutable sb = ValueStringBuilder(Span<char>(buffer))
+    try
+        sb.Append("name=")
+        sb.Append(name)
+        sb.Append(", count=")
+        sb.Append(string count)
+        sb.ToString()
+    finally
+        sb.Dispose()
 ```
 
 ### Hashing

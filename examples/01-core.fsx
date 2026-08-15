@@ -39,6 +39,15 @@ assertEqual "String.truncate" "long" (String.truncate 4 "long text")
 assertEqual "String.toOption on blank -> None" None (String.toOption "   ")
 assertEqual "String.toOption on content -> Some" (Some "hi") (String.toOption "hi")
 assertEqual "String.countOccurrences" 2 ("abcabc" |> String.countOccurrences "abc")
+// equalsAny/containsAny/endsWithAny take a StringComparison explicitly rather than an
+// overload pair, so the comparison mode is always visible at the call site; the char[]
+// variants below have no such parameter -- a single char has no case-folding worth it.
+assertTrue "String.equalsAny matches ignoring case" ("HELLO" |> String.equalsAny StringComparison.OrdinalIgnoreCase [| "hi"; "hello" |])
+assertTrue "String.containsAny finds any of several substrings" ("hello world" |> String.containsAny StringComparison.Ordinal [| "xyz"; "world" |])
+assertTrue "String.endsWithAny checks several suffixes at once" ("report.PDF" |> String.endsWithAny StringComparison.OrdinalIgnoreCase [| ".doc"; ".pdf" |])
+assertTrue "String.equalsAnyChar matches a single-char string" ("x" |> String.equalsAnyChar [| 'x'; 'y' |])
+assertTrue "String.containsAnyChar finds any of several chars" ("hello" |> String.containsAnyChar [| 'z'; 'e' |])
+assertTrue "String.endsWithAnyChar checks several trailing chars" ("cat.gz" |> String.endsWithAnyChar [| 'z'; 'p' |])
 
 // ── Option ─────────────────────────────────────────────────────────────
 assertEqual "Option.toResult Some -> Ok" (Ok 42) (Some 42 |> Option.toResult "missing")
@@ -46,12 +55,24 @@ assertEqual "Option.toResult None -> Error" (Error "missing") (None |> Option.to
 assertEqual "Option.zip pairs two Somes" (Some(1, "a")) (Option.zip (Some 1) (Some "a"))
 assertEqual "Option.map2 combines two Somes" (Some 3) (Option.map2 (+) (Some 1) (Some 2))
 assertEqual "Option.ofString blank -> None" None (Option.ofString "   ")
+// tryCast is a type-guard cast: Some on a matching CLR type test, None otherwise -- including
+// for null, since a type test against null never succeeds. ofPredicate wraps a value in Some
+// only when a predicate holds for it.
+assertEqual "Option.tryCast succeeds for a matching type" (Some "hi") (Option.tryCast<string> (box "hi"))
+assertEqual "Option.tryCast fails for a mismatched type" None (Option.tryCast<int> (box "hi"))
+assertEqual "Option.ofPredicate wraps the value when the predicate holds" (Some 5) (5 |> Option.ofPredicate (fun x -> x > 0))
+assertEqual "Option.ofPredicate rejects it when the predicate fails" None (-5 |> Option.ofPredicate (fun x -> x > 0))
 
 // ── ValueOption ────────────────────────────────────────────────────────
 // The struct counterpart of Option -- no allocation, meant for hot paths.
 // `ofCSharpTryPattern` adapts a TryXxx (bool * value) tuple straight from a BCL call.
 assertEqual "ValueOption.ofCSharpTryPattern success" (ValueSome 42) (Int32.TryParse "42" |> ValueOption.ofCSharpTryPattern)
 assertEqual "ValueOption.ofCSharpTryPattern failure" ValueNone (Int32.TryParse "nope" |> ValueOption.ofCSharpTryPattern)
+// Same two combinators, struct-typed: ValueSome/ValueNone instead of Some/None.
+assertEqual "ValueOption.tryCast succeeds for a matching type" (ValueSome "hi") (ValueOption.tryCast<string> (box "hi"))
+assertEqual "ValueOption.tryCast fails for a mismatched type" ValueNone (ValueOption.tryCast<int> (box "hi"))
+assertEqual "ValueOption.ofPredicate wraps the value when the predicate holds" (ValueSome 5) (5 |> ValueOption.ofPredicate (fun x -> x > 0))
+assertEqual "ValueOption.ofPredicate rejects it when the predicate fails" ValueNone (-5 |> ValueOption.ofPredicate (fun x -> x > 0))
 
 // ── Result ─────────────────────────────────────────────────────────────
 assertEqual "Result.defaultValue on Ok" 42 (Ok 42 |> Result.defaultValue 0)
