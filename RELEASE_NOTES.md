@@ -1,3 +1,15 @@
+## 1.3.0
+
+### Removed
+- Fable support. It was never real: 20 of 43 source files carried `#if FABLE_COMPILER`
+  branches and the package shipped a `fable/` source copy, but the library has never
+  compiled under Fable — it fails on `LinkedList<T>`, `Stack<T>.Enumerator`, `Stopwatch`,
+  `ConfiguredTaskAwaitable` and `Interlocked.Exchange`. The conditionals, the `fable/`
+  pack target, the `Fable` build configuration and the claim are gone.
+
+Nothing changes for .NET consumers: the public surface is byte-identical, 551 members
+before and after.
+
 ## 1.2.1
 
 Documentation only; no API or behaviour change.
