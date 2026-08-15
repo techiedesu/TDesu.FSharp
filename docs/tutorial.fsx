@@ -43,7 +43,7 @@ let invalid = processUser "" -5
 Short-circuit on None. Great for lookups and parsing.
 *)
 
-open TDesu.FSharp.MaybeBuilder
+open TDesu.FSharp.Builders
 
 let tryFindUser (id: int) =
     if id > 0 then Some {| Name = "Alice"; Email = "alice@example.com" |}

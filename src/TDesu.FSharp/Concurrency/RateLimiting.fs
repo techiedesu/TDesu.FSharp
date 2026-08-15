@@ -48,7 +48,7 @@ type SlidingWindowLimiter(maxRequests: int, window: TimeSpan, clock: IClock) =
     /// </summary>
     member _.TryAcquire() : Result<unit, TimeSpan> =
         let nowTicks = clock.UtcNow.Ticks
-        if nowTicks - windowStart > windowTicks then
+        if nowTicks - windowStart >= windowTicks then
             count <- 1
             windowStart <- nowTicks
             Ok()
@@ -73,7 +73,7 @@ type SlidingWindowLimiter(maxRequests: int, window: TimeSpan, clock: IClock) =
     member _.TryAcquire() : Result<unit, TimeSpan> =
         lock lockObj (fun () ->
             let nowTicks = clock.UtcNow.Ticks
-            if nowTicks - windowStart > windowTicks then
+            if nowTicks - windowStart >= windowTicks then
                 count <- 1
                 windowStart <- nowTicks
                 Ok()

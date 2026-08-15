@@ -70,6 +70,13 @@ module Operators =
     let inline isNotNullRef<'T when 'T: not struct> (v: 'T) = obj.ReferenceEquals(v, null) |> not
 
     /// <summary>
+    /// Returns <c>true</c> if the reference-type value is not null.
+    /// </summary>
+    /// <param name="v">Reference-type value to check.</param>
+    [<Obsolete("Renamed to isNotNullRef, which pairs with isNullRef. This alias will be removed in 2.0.")>]
+    let inline isNotNull<'T when 'T: not struct> (v: 'T) = isNotNullRef v
+
+    /// <summary>
     /// Applies a side-effect action to a value, then returns the value unchanged.
     /// Useful for logging or debugging in a pipeline.
     /// </summary>

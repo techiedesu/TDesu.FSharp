@@ -21,6 +21,7 @@ dotnet add package TDesu.FSharp
 
 ```fsharp
 open TDesu.FSharp
+open TDesu.FSharp.Operators
 
 // ^ -- apply without parens
 raise ^ exn "something went wrong"
