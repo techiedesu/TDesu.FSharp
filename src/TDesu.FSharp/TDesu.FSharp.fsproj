@@ -47,6 +47,7 @@
         <Compile Include="Core\String.fs" />
         <Compile Include="Core\Options.fs" />
         <Compile Include="Core\NumericParsing.fs" />
+        <Compile Include="Core\Numerics.fs" />
         <Compile Include="Collections\Collections.fs" />
         <Compile Include="Tasks\Tasks.fs" />
         <Compile Include="IO\IO.fs" />
@@ -56,6 +57,7 @@
         <Compile Include="Core\StateMachine.fs" />
         <Compile Include="Buffers\Buffers.fs" />
         <Compile Include="ActivePatterns\ActivePatterns.fs" />
+        <Compile Include="ActivePatterns\Comparisons.fs" />
         <Compile Include="IO\TemporaryFileStream.fs" />
         <Compile Include="Types\Types.fs" />
         <Compile Include="Core\Validation.fs" />

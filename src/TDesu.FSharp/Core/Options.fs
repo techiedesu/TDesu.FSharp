@@ -9,6 +9,45 @@ module ValueOption =
     /// <param name="value">The output value from the TryXxx method.</param>
     let inline ofCSharpTryPattern (status, value) = if status then ValueSome value else ValueNone
 
+    /// <summary>
+    /// Type-guard cast: returns <c>ValueSome(value :?> 'T)</c> if <paramref name="value"/> is of type
+    /// <c>'T</c>, otherwise <c>ValueNone</c>. A <c>null</c> input returns <c>ValueNone</c> rather than
+    /// throwing, since a CLR type test against null never succeeds for any <c>'T</c>.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// let boxed: obj = box "hello"
+    /// ValueOption.tryCast&lt;string&gt; boxed // ValueSome "hello"
+    /// ValueOption.tryCast&lt;int&gt; boxed    // ValueNone
+    /// ValueOption.tryCast&lt;string&gt; null  // ValueNone
+    /// </code>
+    /// </example>
+    /// <param name="value">The boxed value to type-test.</param>
+    let inline tryCast<'T> (value: obj) : 'T voption =
+        match value with
+        | :? 'T as v -> ValueSome v
+        | _ -> ValueNone
+
+    /// <summary>
+    /// Returns <c>ValueSome(value)</c> if <paramref name="predicate"/> returns <c>true</c> for it, otherwise
+    /// <c>ValueNone</c>.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="predicate"/> is a function argument: per the null policy a null or throwing predicate
+    /// is a programmer error, so it is called unguarded and any exception (including on a null delegate)
+    /// propagates unchanged rather than being swallowed.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// ValueOption.ofPredicate (fun x -> x > 0) 5   // ValueSome 5
+    /// ValueOption.ofPredicate (fun x -> x > 0) -5  // ValueNone
+    /// </code>
+    /// </example>
+    /// <param name="predicate">The predicate to test the value with.</param>
+    /// <param name="value">The value to conditionally wrap.</param>
+    let inline ofPredicate ([<InlineIfLambda>] predicate: 'T -> bool) (value: 'T) : 'T voption =
+        if predicate value then ValueSome value else ValueNone
+
 [<RequireQualifiedAccess>]
 module Option =
     /// Cached <c>Some(())</c> to avoid allocations.
@@ -28,9 +67,8 @@ module Option =
 
     /// Applies an action to the Some value (discarding its return value), or does nothing for None.
     /// <param name="f">The function to apply to the contained value.</param>
-    /// <param name="value">The option to act on.</param>
-    let inline iterIgnore ([<InlineIfLambda>] f: 'T -> 'TResult) (value: 'T option) =
-        match value with
+    let inline iterIgnore ([<InlineIfLambda>] f: 'T -> 'TResult) =
+        function
         | None -> ()
         | Some v -> %f v
 
@@ -48,12 +86,50 @@ module Option =
         else Some s
 
     /// <summary>
+    /// Type-guard cast: returns <c>Some(value :?> 'T)</c> if <paramref name="value"/> is of type <c>'T</c>,
+    /// otherwise <c>None</c>. A <c>null</c> input returns <c>None</c> rather than throwing, since a CLR type
+    /// test against null never succeeds for any <c>'T</c>.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// let boxed: obj = box "hello"
+    /// Option.tryCast&lt;string&gt; boxed // Some "hello"
+    /// Option.tryCast&lt;int&gt; boxed    // None
+    /// Option.tryCast&lt;string&gt; null  // None
+    /// </code>
+    /// </example>
+    /// <param name="value">The boxed value to type-test.</param>
+    let inline tryCast<'T> (value: obj) : 'T option =
+        match value with
+        | :? 'T as v -> Some v
+        | _ -> None
+
+    /// <summary>
+    /// Returns <c>Some(value)</c> if <paramref name="predicate"/> returns <c>true</c> for it, otherwise
+    /// <c>None</c>.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="predicate"/> is a function argument: per the null policy a null or throwing predicate
+    /// is a programmer error, so it is called unguarded and any exception (including on a null delegate)
+    /// propagates unchanged rather than being swallowed.
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// Option.ofPredicate (fun x -> x > 0) 5   // Some 5
+    /// Option.ofPredicate (fun x -> x > 0) -5  // None
+    /// </code>
+    /// </example>
+    /// <param name="predicate">The predicate to test the value with.</param>
+    /// <param name="value">The value to conditionally wrap.</param>
+    let inline ofPredicate ([<InlineIfLambda>] predicate: 'T -> bool) (value: 'T) : 'T option =
+        if predicate value then Some value else None
+
+    /// <summary>
     /// Converts <c>Some</c> to <c>Ok</c>, <c>None</c> to <c>Error</c> with the given error value.
     /// </summary>
     /// <param name="error">The error value to use when the option is None.</param>
-    /// <param name="opt">The option to convert.</param>
-    let inline toResult error opt =
-        match opt with
+    let inline toResult error =
+        function
         | Some v -> Ok v
         | None -> Error error
 
@@ -110,63 +186,57 @@ module Result =
 
     /// Transforms the Ok value with f, passing Error through unchanged.
     /// <param name="f">The mapping function to apply to the Ok value.</param>
-    /// <param name="r">The result to transform.</param>
-    let inline map ([<InlineIfLambda>] f) r =
-        match r with
+    let inline map ([<InlineIfLambda>] f) =
+        function
         | Ok v -> Ok(f v)
         | Error e -> Error e
 
     /// Chains a Result-returning function on Ok; short-circuits on Error.
     /// <param name="f">The function returning a new Result.</param>
-    /// <param name="r">The result to bind over.</param>
-    let inline bind ([<InlineIfLambda>] f) r =
-        match r with
+    let inline bind ([<InlineIfLambda>] f) =
+        function
         | Ok v -> f v
         | Error e -> Error e
 
     /// Transforms the Error value with f, passing Ok through unchanged.
     /// <param name="f">The mapping function to apply to the Error value.</param>
-    /// <param name="r">The result to transform.</param>
-    let inline mapError ([<InlineIfLambda>] f) r =
-        match r with
+    let inline mapError ([<InlineIfLambda>] f) =
+        function
         | Ok v -> Ok v
         | Error e -> Error(f e)
 
     /// Returns true if the result is Ok.
     /// <param name="r">The result to check.</param>
-    let inline isOk r =
+    let inline isOk (r: Result<_, _>) =
         match r with
         | Ok _ -> true
         | Error _ -> false
 
     /// Returns true if the result is Error.
     /// <param name="r">The result to check.</param>
-    let inline isError r =
+    let inline isError (r: Result<_, _>) =
         match r with
         | Ok _ -> false
         | Error _ -> true
 
     /// Extracts the Ok value, or computes a fallback from the Error.
     /// <param name="f">The function to compute a fallback from the Error value.</param>
-    /// <param name="r">The result to extract from.</param>
-    let inline valueOr ([<InlineIfLambda>] f: 'TError -> 'T) (r: Result<'T, 'TError>) =
-        match r with
+    let inline valueOr ([<InlineIfLambda>] f: 'TError -> 'T) =
+        function
         | Ok v -> v
         | Error e -> f e
 
     /// Returns the Ok value, or the given default.
     /// <param name="def">The default value to return on Error.</param>
-    /// <param name="r">The result to extract from.</param>
-    let inline defaultValue (def: 'T) (r: Result<'T, _>) =
-        match r with
+    let inline defaultValue (def: 'T) =
+        function
         | Ok v -> v
         | Error _ -> def
 
     /// Returns the Ok value, or computes a default.
     /// <param name="f">The function to compute a default value on Error.</param>
-    /// <param name="r">The result to extract from.</param>
-    let inline defaultWith ([<InlineIfLambda>] f: unit -> 'T) (r: Result<'T, _>) =
-        match r with
+    let inline defaultWith ([<InlineIfLambda>] f: unit -> 'T) =
+        function
         | Ok v -> v
         | Error _ -> f ()
 
@@ -180,9 +250,8 @@ module Result =
 
     /// Returns the result if Ok, otherwise computes a fallback from the Error.
     /// <param name="f">The function to compute a fallback result from the Error value.</param>
-    /// <param name="r">The result to evaluate.</param>
-    let inline orElseWith ([<InlineIfLambda>] f: 'TError -> Result<'T, 'TError2>) (r: Result<'T, 'TError>) =
-        match r with
+    let inline orElseWith ([<InlineIfLambda>] f: 'TError -> Result<'T, 'TError2>) =
+        function
         | Ok v -> Ok v
         | Error e -> f e
 
@@ -204,7 +273,6 @@ module Result =
 
     /// Converts an Option to a Result: Some becomes Ok, None becomes Error.
     /// <param name="error">The error value to use when the option is None.</param>
-    /// <param name="opt">The option to convert.</param>
     let inline ofOption (error: 'TError) (opt: 'T option) : Result<'T, 'TError> =
         match opt with
         | Some v -> Ok v

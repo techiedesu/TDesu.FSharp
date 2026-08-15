@@ -11,6 +11,8 @@
 
     <ItemGroup>
         <Compile Include="TestHelpers.fs" />
+        <Compile Include="NumericsTests.fs" />
+        <Compile Include="ComparisonsTests.fs" />
         <Compile Include="StringTests.fs" />
         <Compile Include="OptionTests.fs" />
         <Compile Include="ResultTests.fs" />
@@ -34,6 +36,8 @@
         <Compile Include="ValidationTests.fs" />
         <Compile Include="EnvTests.fs" />
         <Compile Include="TaskGroupTests.fs" />
+        <Compile Include="StringMatchingTests.fs" />
+        <Compile Include="CollectionsHardeningTests.fs" />
         <Compile Include="ResourceSafetyTests.fs" />
     </ItemGroup>
 
