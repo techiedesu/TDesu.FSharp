@@ -56,6 +56,7 @@
         <Compile Include="Concurrency\RateLimiting.fs" />
         <Compile Include="Core\StateMachine.fs" />
         <Compile Include="Buffers\Buffers.fs" />
+        <Compile Include="Buffers\ValueStringBuilder.fs" />
         <Compile Include="ActivePatterns\ActivePatterns.fs" />
         <Compile Include="ActivePatterns\Comparisons.fs" />
         <Compile Include="IO\TemporaryFileStream.fs" />

@@ -19,6 +19,7 @@
         <Compile Include="TaskTests.fs" />
         <Compile Include="TaskResultTests.fs" />
         <Compile Include="BuffersTests.fs" />
+        <Compile Include="ValueStringBuilderTests.fs" />
         <Compile Include="BuilderTests.fs" />
         <Compile Include="TypesTests.fs" />
         <Compile Include="ResilienceTests.fs" />

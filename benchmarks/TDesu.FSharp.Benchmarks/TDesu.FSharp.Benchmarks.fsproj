@@ -17,6 +17,7 @@
         <Compile Include="UnixTimeBenchmarks.fs" />
         <Compile Include="MemoizeBenchmarks.fs" />
         <Compile Include="StringBenchmarks.fs" />
+        <Compile Include="ValueStringBuilderBenchmarks.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
