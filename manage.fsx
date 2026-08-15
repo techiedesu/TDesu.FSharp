@@ -15,6 +15,9 @@ let benchProj = "benchmarks/TDesu.FSharp.Benchmarks/TDesu.FSharp.Benchmarks.fspr
 [<Literal>]
 let artifactsDir = "artifacts"
 
+[<Literal>]
+let examplesDir = "examples"
+
 // ── Guards ──────────────────────────────────────────────────────────────
 let scriptDir = __SOURCE_DIRECTORY__
 
@@ -73,6 +76,17 @@ let runOrExit cmd args =
         exit code
     code
 
+/// Like `run`, but sets one extra environment variable on the child process.
+let runWithEnv (envName: string) (envValue: string) (cmd: string) (args: string) =
+    let psi = ProcessStartInfo(FileName = cmd, Arguments = args, UseShellExecute = false, WorkingDirectory = scriptDir)
+    psi.Environment[envName] <- envValue
+    use p = Process.Start(psi)
+    use _cancel = Console.CancelKeyPress.Subscribe(fun e ->
+        e.Cancel <- true
+        try p.Kill(true) with _ -> ())
+    p.WaitForExit()
+    p.ExitCode
+
 let deleteDirs (dirs: string list) =
     for d in dirs do
         let full = Path.Combine(scriptDir, d)
@@ -120,6 +134,69 @@ let cmdPack () =
     color ConsoleColor.Cyan $"Packing into ./{artifactsDir}..."
     runOrExit "dotnet" $"pack {solution} -c Release -o {artifactsDir}"
 
+/// Regenerates examples/obj/ref.generated.fsx -- the single `#r`/`#i` pair every
+/// example script picks up via `#load "_prelude.fsx"`. Written here, in this
+/// process, rather than by the prelude itself: FSI resolves every #load/#r/#i
+/// directive reachable from a script -- transitively, through nested #load -- before
+/// any code in that script runs, so a script cannot compute its own reference and
+/// #load it in the same process. This function is the separate, earlier step that
+/// makes the file exist before any example script's `dotnet fsi` process starts.
+let private writeExamplesRef (useNupkg: bool) =
+    let forwardSlash (p: string) = p.Replace(Path.DirectorySeparatorChar, '/')
+    let objDir = Path.Combine(scriptDir, examplesDir, "obj")
+    Directory.CreateDirectory(objDir) |> ignore
+    let lines =
+        if useNupkg then
+            let artifactsFull = Path.Combine(scriptDir, artifactsDir)
+            let prefix, suffix = "TDesu.FSharp.", ".nupkg"
+            let newest =
+                Directory.GetFiles(artifactsFull, "TDesu.FSharp.*.nupkg")
+                |> Array.filter (fun f -> not (f.EndsWith(".symbols.nupkg", StringComparison.OrdinalIgnoreCase)))
+                |> Array.sortByDescending File.GetLastWriteTimeUtc
+                |> Array.tryHead
+            match newest with
+            | None -> failwith $"No TDesu.FSharp.*.nupkg found in ./{artifactsDir} after packing."
+            | Some path ->
+                let name = Path.GetFileName path
+                let version = name.Substring(prefix.Length, name.Length - prefix.Length - suffix.Length)
+                color ConsoleColor.Cyan $"Examples reference: nupkg TDesu.FSharp {version} (from ./{artifactsDir})"
+                [ sprintf "#i \"nuget: %s\"" (forwardSlash artifactsFull)
+                  sprintf "#r \"nuget: TDesu.FSharp, %s\"" version ]
+        else
+            let dll = Path.Combine(scriptDir, "src/TDesu.FSharp/bin/Release/netstandard2.1/TDesu.FSharp.dll")
+            if not (File.Exists dll) then
+                failwith $"Built DLL not found at {dll}"
+            color ConsoleColor.Cyan $"Examples reference: dll {dll}"
+            [ sprintf "#r \"%s\"" (forwardSlash dll) ]
+    File.WriteAllText(Path.Combine(objDir, "ref.generated.fsx"), String.Join("\n", lines) + "\n")
+
+let cmdExamples (useNupkg: bool) =
+    cmdBuild () |> ignore
+    if useNupkg then
+        cmdPack () |> ignore
+    writeExamplesRef useNupkg
+    let sourceLabel = if useNupkg then "nupkg" else "dll"
+    let scripts =
+        Directory.GetFiles(Path.Combine(scriptDir, examplesDir), "*.fsx")
+        |> Array.filter (fun f -> not ((Path.GetFileName f).StartsWith "_"))
+        |> Array.sortBy Path.GetFileName
+    color ConsoleColor.Cyan $"Running {scripts.Length} example script(s) (source={sourceLabel})..."
+    let mutable exitCode = 0
+    let mutable i = 0
+    while exitCode = 0 && i < scripts.Length do
+        let name = Path.GetFileName scripts[i]
+        printfn ""
+        let code = runWithEnv "TDESU_EXAMPLES_SOURCE" sourceLabel "dotnet" $"fsi \"{scripts[i]}\""
+        if code = 0 then
+            color ConsoleColor.Green $"PASS  {name}"
+        else
+            color ConsoleColor.Red $"FAIL  {name} (exit code {code})"
+            exitCode <- code
+        i <- i + 1
+    if exitCode = 0 then
+        color ConsoleColor.Green $"All {scripts.Length} example script(s) passed."
+    exitCode
+
 let cmdClean () =
     color ConsoleColor.Cyan "Cleaning..."
     run "dotnet" $"clean {solution}" |> ignore
@@ -141,6 +218,8 @@ let showHelp () =
     printfn "  build   Build solution (Release)"
     printfn "  test    Run tests"
     printfn "  bench   Run benchmarks"
+    printfn "  examples          Build, then run examples/*.fsx via dotnet fsi"
+    printfn "  examples --nupkg  Pack, then run examples against the packed nupkg"
     printfn "  docs             Build fsdocs documentation"
     printfn "  docs --watch     Watch & live-reload docs"
     printfn "  pack    Pack NuGet into ./artifacts"
@@ -159,6 +238,7 @@ let exitCode =
     | "build" -> cmdBuild ()
     | "test"  -> cmdTest ()
     | "bench" -> cmdBench ()
+    | "examples" -> cmdExamples (hasFlag "--nupkg")
     | "docs"  -> if hasFlag "--watch" then cmdDocsWatch () else cmdDocs ()
     | "pack"  -> cmdPack ()
     | "clean" -> cmdClean ()

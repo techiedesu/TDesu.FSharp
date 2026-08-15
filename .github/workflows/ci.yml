@@ -27,6 +27,9 @@ jobs:
       - name: Test
         run: dotnet test --no-build --verbosity normal
 
+      - name: Examples
+        run: dotnet fsi manage.fsx examples
+
       - name: Build docs
         run: |
           dotnet tool restore
