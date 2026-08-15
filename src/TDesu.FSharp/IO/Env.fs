@@ -2,7 +2,6 @@ namespace TDesu.FSharp.IO
 
 open System
 
-#if !FABLE_COMPILER
 /// <summary>
 /// Environment variable helpers.
 /// </summary>
@@ -36,4 +35,3 @@ module Env =
         match getVar name with
         | Some v -> v
         | None -> defaultValue
-#endif

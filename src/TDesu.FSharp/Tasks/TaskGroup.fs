@@ -3,7 +3,6 @@ namespace TDesu.FSharp.Tasks
 open System
 open System.Threading.Tasks
 
-#if !FABLE_COMPILER
 /// <summary>
 /// Structured concurrency: run multiple tasks, cancel all on first failure.
 /// Similar to Go's <c>errgroup</c>.
@@ -65,4 +64,3 @@ type TaskGroup private (cts: System.Threading.CancellationTokenSource) =
         member _.Dispose() =
             try cts.Cancel() with :? ObjectDisposedException -> ()
             cts.Dispose()
-#endif

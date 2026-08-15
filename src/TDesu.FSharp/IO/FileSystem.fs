@@ -2,7 +2,6 @@ namespace TDesu.FSharp.IO
 
 open System
 
-#if !FABLE_COMPILER
 open System.IO
 open TDesu.FSharp.Operators
 
@@ -40,7 +39,6 @@ module Directory =
     /// <param name="path">The directory path to create.</param>
     let create path =
         %Directory.CreateDirectory(path)
-#endif
 
 [<RequireQualifiedAccess>]
 module Path =

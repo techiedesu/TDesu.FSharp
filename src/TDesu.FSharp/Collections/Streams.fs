@@ -5,7 +5,6 @@ open System.Collections.Generic
 open TDesu.FSharp
 open TDesu.FSharp.Operators
 
-#if !FABLE_COMPILER
 open System.IO
 
 [<RequireQualifiedAccess>]
@@ -26,4 +25,3 @@ module MemoryStream =
     let inline reset (memoryStream: MemoryStream) =
         Guard.notNull "memoryStream" memoryStream
         memoryStream.Position <- 0
-#endif

@@ -9,22 +9,9 @@ open System
 /// <remarks>
 /// Thread-safe. The <see cref="CalData"/> reference is swapped atomically.
 /// On .NET, uses <see cref="System.Diagnostics.Stopwatch"/> for high-resolution elapsed time.
-/// On Fable, falls back to <see cref="System.DateTimeOffset.UtcNow"/>.
 /// </remarks>
 [<RequireQualifiedAccess>]
 module UnixTime =
-#if FABLE_COMPILER
-    /// Current Unix timestamp in seconds.
-    let seconds () : int64 =
-        DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-
-    /// Current Unix timestamp in milliseconds.
-    let milliseconds () : int64 =
-        DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-
-    /// Current Unix timestamp in seconds as int32 (for protocols that use 32-bit timestamps).
-    let inline seconds32 () : int32 = int32 (seconds ())
-#else
     open System.Diagnostics
 
     /// Calibration snapshot — swapped atomically as a single reference.
@@ -70,4 +57,3 @@ module UnixTime =
 
     /// Current Unix timestamp in seconds as int32 (for protocols that use 32-bit timestamps).
     let inline seconds32 () : int32 = int32 (seconds ())
-#endif

@@ -501,7 +501,6 @@ fake.Advance(TimeSpan.FromHours 1.0)
 - **Idiomatic F#** -- follows FSharp.Core naming: `map`, `bind`, `iter`, `tryX`, `ofX`, `toX`
 - **Inline everything** -- zero-cost abstractions via `[<InlineIfLambda>]`
 - **No dependencies** -- only FSharp.Core
-- **Fable compatible** -- sources included in nupkg for JS/TS transpilation
 - **XML docs on all public APIs** -- works with IDE tooltips and [fsdocs](https://techiedesu.github.io/TDesu.FSharp/)
 
 ## License

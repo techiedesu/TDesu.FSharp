@@ -9,69 +9,11 @@ open System.Threading.Tasks
 /// </summary>
 /// <remarks>
 /// On .NET uses <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey,TValue}"/>.
-/// On Fable uses plain <c>Dictionary</c> (JS is single-threaded).
 /// TTL variants periodically clean up stale entries every 1000 operations.
 /// </remarks>
 [<RequireQualifiedAccess>]
 module Memoize =
 
-#if FABLE_COMPILER
-    open System.Collections.Generic
-
-    /// Memoizes a function. Cached forever (or until process restart).
-    /// <param name="f">Function whose results are cached by input key.</param>
-    let create (f: 'TKey -> 'TValue) =
-        let cache = Dictionary<'TKey, 'TValue>()
-        fun key ->
-            match cache.TryGetValue key with
-            | true, v -> v
-            | _ ->
-                let v = f key
-                cache[key] <- v
-                v
-
-    /// Memoizes an async function. Cached forever.
-    /// <param name="f">Async function whose results are cached by input key.</param>
-    let createAsync (f: 'TKey -> Task<'TValue>) =
-        let cache = Dictionary<'TKey, 'TValue>()
-        fun key -> task {
-            match cache.TryGetValue key with
-            | true, v -> return v
-            | _ ->
-                let! v = f key
-                cache[key] <- v
-                return v
-        }
-
-    /// Memoizes a function with time-to-live. Expired entries are recomputed.
-    /// <param name="ttl">Duration before a cached entry expires.</param>
-    /// <param name="f">Function whose results are cached by input key.</param>
-    let withTtl (ttl: TimeSpan) (f: 'TKey -> 'TValue) =
-        let cache = Dictionary<'TKey, struct('TValue * DateTime)>()
-        fun key ->
-            let now = DateTime.UtcNow
-            match cache.TryGetValue key with
-            | true, struct(v, ts) when now - ts < ttl -> v
-            | _ ->
-                let v = f key
-                cache[key] <- struct(v, now)
-                v
-
-    /// Memoizes an async function with time-to-live.
-    /// <param name="ttl">Duration before a cached entry expires.</param>
-    /// <param name="f">Async function whose results are cached by input key.</param>
-    let withTtlAsync (ttl: TimeSpan) (f: 'TKey -> Task<'TValue>) =
-        let cache = Dictionary<'TKey, struct('TValue * DateTime)>()
-        fun key -> task {
-            let now = DateTime.UtcNow
-            match cache.TryGetValue key with
-            | true, struct(v, ts) when now - ts < ttl -> return v
-            | _ ->
-                let! v = f key
-                cache[key] <- struct(v, now)
-                return v
-        }
-#else
     open System.Collections.Concurrent
 
     /// Memoizes a function. Cached forever (or until process restart).
@@ -142,4 +84,3 @@ module Memoize =
                             cache.TryRemove(kvp.Key) |> ignore
                 return v
         }
-#endif

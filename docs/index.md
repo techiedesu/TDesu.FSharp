@@ -57,7 +57,6 @@ let result = taskResult {
 - **Idiomatic F#** -- follows FSharp.Core naming conventions
 - **Inline everything** -- zero-cost abstractions via `[<InlineIfLambda>]`
 - **No dependencies** -- only FSharp.Core
-- **Fable compatible** -- sources included in nupkg
 - **XML docs** -- works with IDE tooltips and fsdocs
 
 ## Links

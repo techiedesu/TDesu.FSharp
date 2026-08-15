@@ -124,7 +124,6 @@ module Disposable =
     /// Creates a new deferred cleanup stack.
     let deferStack () = new DeferStack()
 
-#if !FABLE_COMPILER
     /// Creates a temporary directory that is deleted on Dispose.
     let tempDir () =
         let g = Guid.NewGuid()
@@ -136,4 +135,3 @@ module Disposable =
     let tempFile () =
         let path = IO.Path.GetTempFileName()
         path, create (fun () -> try System.IO.File.Delete(path) with _ -> ())
-#endif

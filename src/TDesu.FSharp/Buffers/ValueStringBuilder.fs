@@ -1,6 +1,3 @@
-#if FABLE_COMPILER
-module internal TDesu.FSharp.Buffers.ValueStringBuilder_NotAvailable
-#else
 namespace TDesu.FSharp.Buffers
 
 open System
@@ -199,4 +196,3 @@ type ValueStringBuilder =
         this._arrayToReturnToPool <- newArray
         if not (isNull toReturn) then
             ArrayPool<char>.Shared.Return(toReturn)
-#endif

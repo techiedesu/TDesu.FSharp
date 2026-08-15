@@ -7,7 +7,7 @@ open System.Threading.Tasks
 /// Simple circuit breaker — prevents cascading failures by tracking consecutive errors.
 /// </summary>
 /// <remarks>
-/// Thread-safe on .NET (uses <c>lock</c>). On Fable, single-threaded by design.
+/// Thread-safe: state transitions are taken under a <c>lock</c>.
 /// State transitions: <c>Closed → Open → HalfOpen → Closed</c>.
 /// </remarks>
 [<RequireQualifiedAccess>]
@@ -39,7 +39,6 @@ module CircuitBreaker =
     /// <param name="config">Circuit breaker configuration specifying threshold and cooldown.</param>
     let create (config: Config) =
         let state = ref (Closed 0)
-#if !FABLE_COMPILER
         let sync = obj ()
         let inline writeState v = lock sync (fun () -> state.Value <- v)
         let inline atomicCheckAndTransition () =
@@ -61,26 +60,6 @@ module CircuitBreaker =
                 | _ ->
                     state.Value <- Open(now.Add config.Cooldown)
                 state.Value)
-#else
-        let inline writeState v = state.Value <- v
-        let inline atomicCheckAndTransition () =
-            let now = DateTime.UtcNow
-            match state.Value with
-            | Open resetAt when now < resetAt -> state.Value
-            | Open _ -> state.Value <- HalfOpen; HalfOpen
-            | s -> s
-        let inline atomicRecordFailure () =
-            let now = DateTime.UtcNow
-            match state.Value with
-            | Closed failures ->
-                let n = failures + 1
-                state.Value <-
-                    if n >= config.Threshold then Open(now.Add config.Cooldown)
-                    else Closed n
-            | _ ->
-                state.Value <- Open(now.Add config.Cooldown)
-            state.Value
-#endif
 
         fun (f: unit -> Task<'T>) -> task {
             match atomicCheckAndTransition () with

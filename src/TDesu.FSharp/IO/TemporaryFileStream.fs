@@ -1,6 +1,3 @@
-﻿#if FABLE_COMPILER
-module internal TDesu.FSharp.IO.TemporaryFileStream_NotAvailable
-#else
 namespace TDesu.FSharp.IO
 
 open System.IO
@@ -64,4 +61,3 @@ type TemporaryFileStream(?tempFileName, ?doNotDeleteFileAfterDispose) =
                     try File.Delete(tempFileName) with
                     | _ -> ()
         base.Dispose(disposing)
-#endif

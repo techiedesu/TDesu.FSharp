@@ -35,7 +35,7 @@ module Task =
     /// Runs tasks in parallel with a throttle (max concurrent). Returns all results.
     /// </summary>
     /// <remarks>
-    /// On Fable, runs without throttling (JS is single-threaded). A null <paramref name="items"/>
+    /// A null <paramref name="items"/>
     /// sequence is treated as empty (returns an empty array).
     /// The semaphore is guaranteed to outlive every task that can still call <c>Release()</c> on it:
     /// if enumerating <paramref name="items"/> or awaiting the throttle throws (e.g. a cancelled wait
@@ -48,10 +48,6 @@ module Task =
     let parallelThrottle (maxConcurrent: int) (items: 'T seq) (f: 'T -> Task<'TResult>) : Task<'TResult[]> =
         let items = if isNotNullRef items then items else Seq.empty
         task {
-#if FABLE_COMPILER
-            let tasks = items |> Seq.map f
-            return! Task.WhenAll(tasks)
-#else
             let semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
             try
                 let tasks = ResizeArray<Task<'TResult>>()
@@ -73,7 +69,6 @@ module Task =
                     return raise ex
             finally
                 semaphore.Dispose()
-#endif
         }
 
     /// <summary>
@@ -90,10 +85,6 @@ module Task =
     let parallelThrottleUnit (maxConcurrent: int) (items: 'T seq) (f: 'T -> Task<unit>) : Task<unit> =
         let items = if isNotNullRef items then items else Seq.empty
         task {
-#if FABLE_COMPILER
-            let tasks = items |> Seq.map f
-            let! _ = Task.WhenAll(tasks)
-#else
             let semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
             try
                 let tasks = ResizeArray<Task<unit>>()
@@ -114,7 +105,6 @@ module Task =
                     return raise ex
             finally
                 semaphore.Dispose()
-#endif
             return ()
         }
 

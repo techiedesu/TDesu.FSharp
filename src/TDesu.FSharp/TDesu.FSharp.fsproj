@@ -5,7 +5,7 @@
         <RootNamespace>TDesu.FSharp</RootNamespace>
         <Authors>TDesu</Authors>
         <Description>Generic F# utility library: operators, type extensions, computation expressions, string helpers, task/result combinators.</Description>
-        <PackageTags>fsharp;utilities;common;computation-expressions;task;result;fable</PackageTags>
+        <PackageTags>fsharp;utilities;common;computation-expressions;task;result</PackageTags>
         <PackageLicenseExpression>Unlicense</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/techiedesu/TDesu.FSharp</PackageProjectUrl>
         <RepositoryUrl>https://github.com/techiedesu/TDesu.FSharp</RepositoryUrl>
@@ -18,28 +18,9 @@
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <DebugType>embedded</DebugType>
         <MinVerTagPrefix>v</MinVerTagPrefix>
-        <Configurations>Debug;Release;Fable</Configurations>
+        <Configurations>Debug;Release</Configurations>
         <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
-
-    <!-- Fable: include sources in nupkg for Fable consumers.
-         Moved into a Target so Rider/VS design-time builds don't see duplicate items for .fs files. -->
-    <Target Name="_IncludeFableSourcesInPack" BeforeTargets="_GetPackageFiles">
-        <ItemGroup>
-            <None Include="*.fsproj" Pack="true" PackagePath="fable/" />
-            <None Include="Core\*.fs" Pack="true" PackagePath="fable/Core/" />
-            <None Include="Collections\*.fs" Pack="true" PackagePath="fable/Collections/" />
-            <None Include="Tasks\*.fs" Pack="true" PackagePath="fable/Tasks/" />
-            <None Include="IO\*.fs" Pack="true" PackagePath="fable/IO/" />
-            <None Include="Concurrency\*.fs" Pack="true" PackagePath="fable/Concurrency/" />
-            <None Include="Buffers\*.fs" Pack="true" PackagePath="fable/Buffers/" />
-            <None Include="ActivePatterns\*.fs" Pack="true" PackagePath="fable/ActivePatterns/" />
-            <None Include="Types\*.fs" Pack="true" PackagePath="fable/Types/" />
-            <None Include="Resilience\*.fs" Pack="true" PackagePath="fable/Resilience/" />
-            <None Include="Hashing\*.fs" Pack="true" PackagePath="fable/Hashing/" />
-            <None Include="Builders\*.fs" Pack="true" PackagePath="fable/Builders/" />
-        </ItemGroup>
-    </Target>
 
     <ItemGroup>
         <Compile Include="Core\Operators.fs" />

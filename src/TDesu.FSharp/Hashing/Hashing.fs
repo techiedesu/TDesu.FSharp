@@ -1,6 +1,3 @@
-#if FABLE_COMPILER
-module internal TDesu.FSharp.Hashing_NotAvailable
-#else
 namespace TDesu.FSharp.Hashing
 
 open System
@@ -157,4 +154,3 @@ module CollectionComparer =
         { new IEqualityComparer<'a list> with
             member _.Equals(a, b) = a = b
             member _.GetHashCode(lst) = Hash.ofList lst }
-#endif

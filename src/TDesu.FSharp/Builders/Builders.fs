@@ -60,12 +60,10 @@ type OptionBuilder() =
         | None -> None
         | Some value -> f value
 
-#if !FABLE_COMPILER
     member inline _.Bind(voptionValue, f) =
         match voptionValue with
         | ValueNone -> None
         | ValueSome value -> f value
-#endif
 
     member inline _.Return(maybeNull) =
         if Object.ReferenceEquals(maybeNull, null) then
@@ -80,12 +78,10 @@ type OptionBuilder() =
         | None -> f ()
         | Some _ -> optionValue
 
-#if !FABLE_COMPILER
     member inline _.Combine(optionValue: 'T voption, f) =
         match optionValue with
         | ValueNone -> f ()
         | ValueSome v -> Some v
-#endif
 
     member inline _.Delay f = f
 

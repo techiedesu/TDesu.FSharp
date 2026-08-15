@@ -5,7 +5,6 @@ open System.Threading
 open System.Threading.Tasks
 open TDesu.FSharp.Operators
 
-#if !FABLE_COMPILER
 /// <summary>
 /// Timeout combinators — enforce deadlines on async operations.
 /// </summary>
@@ -40,4 +39,3 @@ module Timeout =
             with :? OperationCanceledException when cts.IsCancellationRequested && not parentCt.IsCancellationRequested ->
                 return timedOutf "Operation exceeded %gms" duration.TotalMilliseconds
         }
-#endif

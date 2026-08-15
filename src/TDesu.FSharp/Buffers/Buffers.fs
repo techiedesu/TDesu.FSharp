@@ -1,6 +1,3 @@
-#if FABLE_COMPILER
-module internal TDesu.FSharp.Buffers_NotAvailable
-#else
 namespace TDesu.FSharp.Buffers
 
 open System
@@ -179,4 +176,3 @@ module ArrayPool =
             f arr
         finally
             ArrayPool<byte>.Shared.Return(arr)
-#endif

@@ -2,7 +2,6 @@ namespace TDesu.FSharp.IO
 
 open System
 
-#if !FABLE_COMPILER
 open System.IO
 open System.Threading
 open System.Threading.Tasks
@@ -80,4 +79,3 @@ module Stream =
             finally
                 System.Buffers.ArrayPool<byte>.Shared.Return(buffer)
         }
-#endif

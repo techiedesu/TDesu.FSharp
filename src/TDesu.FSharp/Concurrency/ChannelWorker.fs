@@ -1,7 +1,5 @@
 namespace TDesu.FSharp.Concurrency
 
-#if !FABLE_COMPILER
-
 open System.Collections.Concurrent
 open System.Threading
 open System.Threading.Tasks
@@ -73,5 +71,3 @@ module ChannelWorker =
                 signal.Dispose()
         }
         Handle(queue, signal, workerTask)
-
-#endif

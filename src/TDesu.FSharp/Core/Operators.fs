@@ -4,9 +4,7 @@ open System
 open Microsoft.FSharp.Core
 
 #nowarn "0077"
-#if !FABLE_COMPILER
 #nowarn "0042"
-#endif
 
 /// <namespacedoc>
 ///   <summary>Core utilities: operators, Guard, UnixTime, String, Option, Result, Validation, Clock, StateMachine, NumericParsing.</summary>
@@ -197,9 +195,6 @@ module Operators =
 
     /// <summary>Unsafe cast like in C#.</summary>
     /// <param name="a">Value to cast.</param>
-#if FABLE_COMPILER
-    let inline ucast<'a, 'b> (a: 'a) : 'b = unbox a
-#else
     let inline ucast<'a, 'b> (a: 'a) : 'b = (# "" a: 'b #)
 
     /// <summary>
@@ -215,8 +210,6 @@ module Operators =
     /// <param name="value">Value to convert.</param>
     let inline ecast< ^a, ^b when (^a or ^b): (static member op_Explicit: ^a -> ^b)> (value: ^a) : ^b =
         ((^a or ^b): (static member op_Explicit: ^a -> ^b) value)
-#endif
-
 
     // ── Exception helpers ── FSharp.Core has failwith, invalidArg, invalidOp, nullArg.
     // These cover the rest, following the same naming convention.

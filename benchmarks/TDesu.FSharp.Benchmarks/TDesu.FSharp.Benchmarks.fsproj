@@ -6,7 +6,7 @@
         <RootNamespace>TDesu.FSharp.Benchmarks</RootNamespace>
         <IsPackable>false</IsPackable>
         <Optimize>true</Optimize>
-        <Configurations>Debug;Release;Fable</Configurations>
+        <Configurations>Debug;Release</Configurations>
         <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
 

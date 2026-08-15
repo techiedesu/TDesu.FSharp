@@ -5,7 +5,6 @@ open System.Collections.Generic
 open System.Threading.Tasks
 open TDesu.FSharp.IO
 
-#if !FABLE_COMPILER
 /// <summary>
 /// CancellationToken helpers — reduces boilerplate for timeout + linked patterns.
 /// </summary>
@@ -37,66 +36,7 @@ module CancellationToken =
     /// <param name="parent">The parent token to link from.</param>
     let inline linkedFrom (parent: CancellationToken) =
         CancellationTokenSource.CreateLinkedTokenSource(parent)
-#endif
 
-#if FABLE_COMPILER
-/// Atomic counter — simple mutable int (JS is single-threaded).
-/// <param name="initial">The initial counter value.</param>
-[<Sealed>]
-type AtomicInt(initial: int) =
-    let mutable value = initial
-    new() = AtomicInt(0)
-    member _.Value = value
-    member _.Increment() = value <- value + 1; value
-    member _.Decrement() = value <- value - 1; value
-    /// <param name="delta">The value to add to the counter.</param>
-    member _.Add(delta: int) = value <- value + delta; value
-    /// <param name="newValue">The value to set.</param>
-    member _.Exchange(newValue: int) = let old = value in value <- newValue; old
-    /// <param name="newValue">The value to set if the current value matches the comparand.</param>
-    /// <param name="comparand">The value to compare against.</param>
-    member _.CompareExchange(newValue: int, comparand: int) =
-        if value = comparand then value <- newValue; true else false
-    member this.Reset() = this.Exchange(0)
-    override _.ToString() = string value
-
-/// Atomic int64 counter — simple mutable int64 (JS is single-threaded).
-/// <param name="initial">The initial counter value.</param>
-[<Sealed>]
-type AtomicInt64(initial: int64) =
-    let mutable value = initial
-    new() = AtomicInt64(0L)
-    member _.Value = value
-    member _.Increment() = value <- value + 1L; value
-    member _.Decrement() = value <- value - 1L; value
-    /// <param name="delta">The value to add to the counter.</param>
-    member _.Add(delta: int64) = value <- value + delta; value
-    /// <param name="newValue">The value to set.</param>
-    member _.Exchange(newValue: int64) = let old = value in value <- newValue; old
-    member _.Reset() = let old = value in value <- 0L; old
-    override _.ToString() = string value
-
-/// One-shot async signal. Wraps TaskCompletionSource for idiomatic F# async coordination.
-/// Fable version — single-threaded, no RunContinuationsAsynchronously needed.
-[<Sealed>]
-type Signal() =
-    let tcs = TaskCompletionSource<unit>()
-    /// Completes the signal, releasing all waiters. Idempotent.
-    member _.Set() = tcs.TrySetResult() |> ignore
-    /// Returns a task that completes when the signal is set.
-    member _.Wait() : Task = tcs.Task
-    /// Returns a task that completes when the signal is set, with a timeout.
-    /// Returns true if signaled, false if timed out.
-    /// <param name="timeout">The maximum duration to wait for the signal.</param>
-    member _.Wait(timeout: TimeSpan) : Task<bool> = task {
-        if tcs.Task.IsCompleted then return true
-        else
-            let! completed = Task.WhenAny(tcs.Task, Task.Delay timeout)
-            return obj.ReferenceEquals(completed, tcs.Task)
-    }
-    /// Whether the signal has been set.
-    member _.IsSet = tcs.Task.IsCompleted
-#else
 /// <summary>
 /// Thread-safe atomic counter using <see cref="System.Threading.Interlocked"/>. Zero-allocation reads.
 /// </summary>
@@ -180,7 +120,6 @@ type Signal() =
     }
     /// Whether the signal has been set.
     member _.IsSet = tcs.Task.IsCompleted
-#endif
 
 /// <summary>
 /// Bounded queue — auto-evicts oldest elements when capacity is reached.
@@ -298,37 +237,6 @@ type BoundedDict<'TKey, 'TValue when 'TKey: equality>(capacity: int) =
 /// </summary>
 [<RequireQualifiedAccess>]
 module PeriodicTimer =
-#if FABLE_COMPILER
-    /// Starts a background loop that runs action every interval.
-    /// <param name="interval">The delay between each tick.</param>
-    /// <param name="action">The async action to execute on each tick.</param>
-    /// <param name="_ct">Cancellation token (unused in Fable).</param>
-    let start (interval: TimeSpan) (action: unit -> Task<unit>) (_ct: Threading.CancellationToken) =
-        let t = task {
-            while true do
-                try
-                    do! Task.Delay(int interval.TotalMilliseconds)
-                    do! action ()
-                with _ -> ()
-        }
-        t :> Task
-
-    /// Like start, but action receives a counter (0-based) for each tick.
-    /// <param name="interval">The delay between each tick.</param>
-    /// <param name="action">The async action to execute, receiving the current tick index.</param>
-    /// <param name="_ct">Cancellation token (unused in Fable).</param>
-    let startCounted (interval: TimeSpan) (action: int -> Task<unit>) (_ct: Threading.CancellationToken) =
-        let mutable tick = 0
-        let t = task {
-            while true do
-                try
-                    do! Task.Delay(int interval.TotalMilliseconds)
-                    do! action tick
-                    tick <- tick + 1
-                with _ -> ()
-        }
-        t :> Task
-#else
     /// Starts a background loop that runs action every interval.
     /// <param name="interval">The delay between each tick.</param>
     /// <param name="action">The async action to execute on each tick.</param>
@@ -364,7 +272,6 @@ module PeriodicTimer =
                 | ex -> try onError ex with _ -> ()
         }
         t :> Task
-#endif
 
 /// <summary>
 /// Snapshot throttle — tracks message count and triggers save at threshold (thread-safe).
@@ -380,34 +287,17 @@ type SnapshotThrottle(threshold: int) =
     /// </summary>
     /// <remarks>Thread-safe: uses atomic increment. Under contention, may trigger slightly past threshold.</remarks>
     member _.Record() =
-#if FABLE_COMPILER
-        counter <- counter + 1
-        if counter >= threshold then
-            counter <- 0
-            true
-        else
-            false
-#else
         let newVal = Threading.Interlocked.Increment(&counter)
         if newVal >= threshold then
             // CAS: only the first thread past the threshold resets and triggers
             Threading.Interlocked.CompareExchange(&counter, 0, newVal) = newVal
         else
             false
-#endif
 
     /// Resets the counter.
     member _.Reset() =
-#if FABLE_COMPILER
-        counter <- 0
-#else
         Threading.Interlocked.Exchange(&counter, 0) |> ignore
-#endif
 
     /// Current count since last snapshot.
     member _.Count =
-#if FABLE_COMPILER
-        counter
-#else
         Threading.Volatile.Read(&counter)
-#endif
