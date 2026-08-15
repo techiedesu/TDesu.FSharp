@@ -42,15 +42,31 @@
     </Target>
 
     <ItemGroup>
-        <Compile Include="Core\Core.fs" />
+        <Compile Include="Core\Operators.fs" />
+        <Compile Include="Core\Guard.fs" />
+        <Compile Include="Core\UnixTime.fs" />
+        <Compile Include="Core\Char.fs" />
+        <Compile Include="Core\Regex.fs" />
         <Compile Include="Core\Clock.fs" />
         <Compile Include="Core\String.fs" />
         <Compile Include="Core\Options.fs" />
         <Compile Include="Core\NumericParsing.fs" />
         <Compile Include="Core\Numerics.fs" />
-        <Compile Include="Collections\Collections.fs" />
-        <Compile Include="Tasks\Tasks.fs" />
-        <Compile Include="IO\IO.fs" />
+        <Compile Include="Collections\Dictionary.fs" />
+        <Compile Include="Collections\Stack.fs" />
+        <Compile Include="Collections\Seq.fs" />
+        <Compile Include="Collections\Streams.fs" />
+        <Compile Include="Collections\List.fs" />
+        <Compile Include="Collections\ResizeArray.fs" />
+        <Compile Include="Tasks\Task.fs" />
+        <Compile Include="Tasks\TaskVOption.fs" />
+        <Compile Include="Tasks\TaskOption.fs" />
+        <Compile Include="Tasks\TaskResult.fs" />
+        <Compile Include="Tasks\TaskGroup.fs" />
+        <Compile Include="IO\FileSystem.fs" />
+        <Compile Include="IO\Env.fs" />
+        <Compile Include="IO\Stream.fs" />
+        <Compile Include="IO\Disposable.fs" />
         <Compile Include="Concurrency\Concurrency.fs" />
         <Compile Include="Concurrency\ChannelWorker.fs" />
         <Compile Include="Concurrency\RateLimiting.fs" />
@@ -62,7 +78,11 @@
         <Compile Include="IO\TemporaryFileStream.fs" />
         <Compile Include="Types\Types.fs" />
         <Compile Include="Core\Validation.fs" />
-        <Compile Include="Resilience\Resilience.fs" />
+        <Compile Include="Resilience\Retry.fs" />
+        <Compile Include="Resilience\Timeout.fs" />
+        <Compile Include="Resilience\CircuitBreaker.fs" />
+        <Compile Include="Resilience\Memoize.fs" />
+        <Compile Include="Resilience\Saga.fs" />
         <Compile Include="Hashing\Hashing.fs" />
         <Compile Include="Builders\Builders.fs" />
     </ItemGroup>
