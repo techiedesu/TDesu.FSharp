@@ -107,3 +107,14 @@ module Seq =
                 Some(sum / float count)
             else
                 None
+
+    /// <summary>
+    /// Converts a sequence to a <see cref="System.Collections.Generic.List{T}"/> (ResizeArray) in a
+    /// single enumeration pass. When <paramref name="source"/> implements
+    /// <see cref="System.Collections.Generic.ICollection{T}"/>, the result is pre-sized to its
+    /// <c>Count</c> so filling it never grows-and-copies. A null <paramref name="source"/> is treated
+    /// as empty.
+    /// </summary>
+    /// <param name="source">The sequence to convert.</param>
+    let toResizeArray (source: 'T seq) : ResizeArray<'T> =
+        if isNull source then ResizeArray<'T>() else ResizeArray<'T>(source)

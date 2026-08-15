@@ -6,7 +6,7 @@ open System.Security.Cryptography
 open System.Text
 
 /// <namespacedoc>
-///   <summary>Hashing utilities: ContentHash (SHA256/SHA1/MD5), Hash.combine, CollectionComparer.</summary>
+///   <summary>Hashing utilities: ContentHash (SHA256/SHA1/MD5), Hash.combine, CollectionComparer, EqualityComparer.</summary>
 /// </namespacedoc>
 /// Pipeline-friendly hash combining using System.HashCode.
 [<RequireQualifiedAccess>]
@@ -154,3 +154,47 @@ module CollectionComparer =
         { new IEqualityComparer<'a list> with
             member _.Equals(a, b) = a = b
             member _.GetHashCode(lst) = Hash.ofList lst }
+
+/// <summary>
+/// Factory for ad hoc <see cref="System.Collections.Generic.IEqualityComparer{T}"/> instances — for
+/// when a <see cref="System.Collections.Generic.Dictionary{TKey,TValue}"/>,
+/// <see cref="System.Collections.Generic.HashSet{T}"/>, or LINQ overload needs a custom key comparer
+/// but a full named type isn't worth declaring.
+/// </summary>
+[<RequireQualifiedAccess>]
+module EqualityComparer =
+    /// <summary>
+    /// Creates an <see cref="System.Collections.Generic.IEqualityComparer{T}"/> from an explicit
+    /// equality function and hash function.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// let ordinalIgnoreCase =
+    ///     EqualityComparer.create
+    ///         (fun (a: string) b -> String.Equals(a, b, StringComparison.OrdinalIgnoreCase))
+    ///         (fun s -> s.ToUpperInvariant().GetHashCode())
+    /// let set = HashSet&lt;string&gt;(ordinalIgnoreCase)
+    /// </code>
+    /// </example>
+    /// <param name="equals">The equality function.</param>
+    /// <param name="getHashCode">The hash function.</param>
+    let create (equals: 'a -> 'a -> bool) (getHashCode: 'a -> int) : IEqualityComparer<'a> =
+        { new IEqualityComparer<'a> with
+            member _.Equals(x, y) = equals x y
+            member _.GetHashCode(obj) = getHashCode obj }
+
+    /// <summary>
+    /// Creates an <see cref="System.Collections.Generic.IEqualityComparer{T}"/> that compares and
+    /// hashes elements by a projected key, using the key's own structural equality and hash code.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// let byId = EqualityComparer.createBy (fun (p: Person) -> p.Id)
+    /// let set = HashSet&lt;Person&gt;(byId)
+    /// </code>
+    /// </example>
+    /// <param name="projection">The function extracting the comparison key from an element.</param>
+    let createBy<'a, 'b when 'b: equality> (projection: 'a -> 'b) : IEqualityComparer<'a> =
+        { new IEqualityComparer<'a> with
+            member _.Equals(x, y) = projection x = projection y
+            member _.GetHashCode(obj) = hash (projection obj) }

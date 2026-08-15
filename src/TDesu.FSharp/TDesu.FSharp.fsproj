@@ -24,6 +24,7 @@
 
     <ItemGroup>
         <Compile Include="Core\Operators.fs" />
+        <Compile Include="Core\Byref.fs" />
         <Compile Include="Core\Guard.fs" />
         <Compile Include="Core\UnixTime.fs" />
         <Compile Include="Core\Char.fs" />
@@ -36,6 +37,7 @@
         <Compile Include="Collections\Dictionary.fs" />
         <Compile Include="Collections\Stack.fs" />
         <Compile Include="Collections\Seq.fs" />
+        <Compile Include="Collections\Array.fs" />
         <Compile Include="Collections\Streams.fs" />
         <Compile Include="Collections\List.fs" />
         <Compile Include="Collections\ResizeArray.fs" />
