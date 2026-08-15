@@ -1,3 +1,12 @@
+## 1.2.1
+
+Documentation only; no API or behaviour change.
+
+### Fixed
+- The readme shipped inside the 1.2.0 package documented none of what 1.2.0 added. Every new API now has a readme entry and a runnable example
+- Several readme and `docs/index.md` code blocks never compiled: missing `open` lines in the Operators, Task and Collections sections, a bare `dict` colliding with FSharp.Core's builtin, `Result.valueOr` needing a type annotation, and a `taskResult` Bind-overload ambiguity
+- `docs/tutorial.fsx` opened a `TDesu.FSharp.MaybeBuilder` module that does not exist
+
 ## 1.2.0
 
 ### Added
