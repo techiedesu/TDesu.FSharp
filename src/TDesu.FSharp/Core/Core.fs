@@ -58,10 +58,16 @@ module Operators =
             field <- ValueSome a
 
     /// <summary>
+    /// Returns <c>true</c> if the reference-type value is null (like <b>isNull</b> but without `| null` constraint).
+    /// </summary>
+    /// <param name="v">Reference-type value to check.</param>
+    let inline isNullRef<'T when 'T: not struct> (v: 'T) = obj.ReferenceEquals(v, null)
+
+    /// <summary>
     /// Returns <c>true</c> if the reference-type value is not null.
     /// </summary>
     /// <param name="v">Reference-type value to check.</param>
-    let inline isNotNull<'T when 'T: not struct> (v: 'T) = obj.ReferenceEquals(v, null) |> not
+    let inline isNotNullRef<'T when 'T: not struct> (v: 'T) = obj.ReferenceEquals(v, null) |> not
 
     /// <summary>
     /// Applies a side-effect action to a value, then returns the value unchanged.
@@ -318,7 +324,8 @@ module Guard =
     /// <param name="paramName">Name of the parameter for the exception.</param>
     /// <param name="value">Value to check for null.</param>
     let inline notNull (paramName: string) (value: 'T when 'T: not struct) =
-        if obj.ReferenceEquals(value, null) then nullArg paramName
+        if Operators.isNullRef value then
+            nullArg paramName
 
     /// <summary>
     /// Throws <see cref="System.ArgumentException"/> if string is null or empty.
