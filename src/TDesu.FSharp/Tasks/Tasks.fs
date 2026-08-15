@@ -34,47 +34,86 @@ module Task =
     /// <summary>
     /// Runs tasks in parallel with a throttle (max concurrent). Returns all results.
     /// </summary>
-    /// <remarks>On Fable, runs without throttling (JS is single-threaded).</remarks>
+    /// <remarks>
+    /// On Fable, runs without throttling (JS is single-threaded). A null <paramref name="items"/>
+    /// sequence is treated as empty (returns an empty array).
+    /// The semaphore is guaranteed to outlive every task that can still call <c>Release()</c> on it:
+    /// if enumerating <paramref name="items"/> or awaiting the throttle throws (e.g. a cancelled wait
+    /// or a throwing enumerator), every already-spawned task is drained before the semaphore is
+    /// disposed, so none of them can release an already-disposed <see cref="System.Threading.SemaphoreSlim"/>.
+    /// </remarks>
     /// <param name="maxConcurrent">Maximum number of tasks allowed to run concurrently.</param>
-    /// <param name="items">The input sequence of items to process.</param>
+    /// <param name="items">The input sequence of items to process. Null is treated as empty.</param>
     /// <param name="f">Async function applied to each item.</param>
     let parallelThrottle (maxConcurrent: int) (items: 'T seq) (f: 'T -> Task<'TResult>) : Task<'TResult[]> =
+        let items = if isNotNullRef items then items else Seq.empty
         task {
 #if FABLE_COMPILER
             let tasks = items |> Seq.map f
             return! Task.WhenAll(tasks)
 #else
-            use semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
-            let tasks = ResizeArray<Task<'TResult>>()
-            for item in items do
-                do! semaphore.WaitAsync()
-                tasks.Add(task {
-                    try return! f item
-                    finally semaphore.Release() |> ignore
-                })
-            return! Task.WhenAll(tasks)
+            let semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
+            try
+                let tasks = ResizeArray<Task<'TResult>>()
+                try
+                    for item in items do
+                        do! semaphore.WaitAsync()
+                        tasks.Add(task {
+                            try return! f item
+                            finally semaphore.Release() |> ignore
+                        })
+                    return! Task.WhenAll(tasks)
+                with ex ->
+                    // Drain every already-spawned task so its `finally semaphore.Release()` still
+                    // targets a live semaphore instead of the one about to be disposed below.
+                    if tasks.Count > 0 then
+                        try
+                            do! Task.WhenAll(tasks) :> Task
+                        with _ -> ()
+                    return raise ex
+            finally
+                semaphore.Dispose()
 #endif
         }
 
+    /// <summary>
     /// Runs tasks in parallel with a throttle, ignoring results.
+    /// </summary>
+    /// <remarks>
+    /// Same null-input and semaphore-lifetime guarantees as <see cref="parallelThrottle"/>: a null
+    /// <paramref name="items"/> sequence is treated as empty, and the semaphore is disposed only after
+    /// every spawned task has been drained, even if the loop itself throws.
+    /// </remarks>
     /// <param name="maxConcurrent">Maximum number of tasks allowed to run concurrently.</param>
-    /// <param name="items">The input sequence of items to process.</param>
+    /// <param name="items">The input sequence of items to process. Null is treated as empty.</param>
     /// <param name="f">Async function applied to each item.</param>
     let parallelThrottleUnit (maxConcurrent: int) (items: 'T seq) (f: 'T -> Task<unit>) : Task<unit> =
+        let items = if isNotNullRef items then items else Seq.empty
         task {
 #if FABLE_COMPILER
             let tasks = items |> Seq.map f
             let! _ = Task.WhenAll(tasks)
 #else
-            use semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
-            let tasks = ResizeArray<Task<unit>>()
-            for item in items do
-                do! semaphore.WaitAsync()
-                tasks.Add(task {
-                    try do! f item
-                    finally semaphore.Release() |> ignore
-                })
-            let! _ = Task.WhenAll(tasks)
+            let semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
+            try
+                let tasks = ResizeArray<Task<unit>>()
+                try
+                    for item in items do
+                        do! semaphore.WaitAsync()
+                        tasks.Add(task {
+                            try do! f item
+                            finally semaphore.Release() |> ignore
+                        })
+                    let! _ = Task.WhenAll(tasks)
+                    ()
+                with ex ->
+                    if tasks.Count > 0 then
+                        try
+                            do! Task.WhenAll(tasks) :> Task
+                        with _ -> ()
+                    return raise ex
+            finally
+                semaphore.Dispose()
 #endif
             return ()
         }
@@ -82,7 +121,7 @@ module Task =
     /// Blocks until the task completes (ConfigureAwait false). No-op if null or already completed.
     /// <param name="t">The task to wait on.</param>
     let runSynchronously (t: #Task) =
-        if isNotNull t && not t.IsCompleted then
+        if isNotNullRef t && not t.IsCompleted then
             t.ConfigureAwait(false).GetAwaiter().GetResult()
 
     /// Synchronously gets the result of a Task (ConfigureAwait false).
