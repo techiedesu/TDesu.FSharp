@@ -3,8 +3,11 @@
 // structured concurrency (run several tasks, cancel the rest on the first failure).
 #load "_prelude.fsx"
 open Prelude
+open System
 open System.Collections.Generic
+open TDesu.FSharp
 open TDesu.FSharp.Collections
+open TDesu.FSharp.Hashing
 
 // ── Dictionary: Some/None instead of the TryGetValue out-param dance ─────
 let ages = Dictionary<string, int>()
@@ -79,5 +82,27 @@ let runBothConcurrently () =
     }
 
 assertEqual "TaskGroup.WaitAll only returns once every Run'd task has completed" 3 (runBothConcurrently () |> Task.getResult)
+
+// ── Allocation-free lookups: ValueOption instead of Option ─────────────
+// Same shape as Array.tryFind, but a miss (or a hit) costs no allocation —
+// which is the whole reason to reach for these in a tight loop.
+assertEqual "Array.valueTryFind finds the first match" (ValueSome 4) ([| 1; 4; 6 |] |> Array.valueTryFind (fun x -> x % 2 = 0))
+assertEqual "Array.valueTryFind reports a miss without allocating an Option" ValueNone ([| 1; 3 |] |> Array.valueTryFind (fun x -> x % 2 = 0))
+assertEqual "Array.valueTryFindLast scans from the end" (ValueSome 6) ([| 1; 4; 6 |] |> Array.valueTryFindLast (fun x -> x % 2 = 0))
+assertEqual "Array.valueChooseFirst projects while it searches" (ValueSome "4") ([| 1; 4; 6 |] |> Array.valueChooseFirst (fun x -> if x % 2 = 0 then ValueSome(string x) else ValueNone))
+
+// ── Seq.toResizeArray: one pass, pre-sized from an ICollection ─────────
+let buffer = [| 1; 2; 3 |] |> Seq.toResizeArray
+assertEqual "Seq.toResizeArray copies every element" 3 buffer.Count
+
+// ── EqualityComparer: netstandard2.1 has no EqualityComparer<T>.Create ──
+let caseInsensitive =
+    EqualityComparer.create
+        (fun (a: string) b -> String.Equals(a, b, StringComparison.OrdinalIgnoreCase))
+        (fun (s: string) -> s.ToLowerInvariant().GetHashCode())
+
+let lookup = Dictionary<string, int>(caseInsensitive)
+lookup["Widget"] <- 1
+assertEqual "a comparer built with EqualityComparer.create drives the dictionary" true (lookup.ContainsKey "WIDGET")
 
 printfn "04-collections-and-tasks.fsx: all assertions passed"

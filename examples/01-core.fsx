@@ -82,4 +82,22 @@ assertEqual "Result.ofOption mirrors Option.toResult" (Ok 42) (Result.ofOption "
 assertEqual "Result.catch turns a thrown exception into Error" true (Result.catch (fun () -> int "not a number") |> Result.isError)
 assertEqual "Result.catch turns success into Ok" (Ok 42) (Result.catch (fun () -> int "42"))
 
+// ── Byref: mutate a local in place, no struct copy ──────────────────────
+// The point is the hot loop: `Byref.add &acc x` writes through the reference
+// instead of returning a new value.
+let sumInPlace (xs: int[]) =
+    let mutable acc = 0
+    for x in xs do
+        Byref.add &acc x
+    acc
+
+assertEqual "Byref.add accumulates through the reference" 15 (sumInPlace [| 1; 2; 3; 4; 5 |])
+
+let bumped () =
+    let mutable n = 41
+    Byref.inc &n
+    n
+
+assertEqual "Byref.inc increments in place" 42 (bumped ())
+
 printfn "01-core.fsx: all assertions passed"

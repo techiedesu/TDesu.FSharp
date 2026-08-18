@@ -1,3 +1,15 @@
+## 1.4.0
+
+### Added
+- `Byref`: in-place `inc`, `dec`, `setv`, `add`, `sub`, `mul`, `div` over a byref, generic via `LanguagePrimitives`
+- `Array.valueTryFind`, `valueTryFindLast`, `valueChooseFirst`, `valueChooseLast` — the `tryFind` family returning `ValueOption`, so a lookup in a hot loop allocates nothing
+- `EqualityComparer.create` / `createBy` — netstandard2.1 has no `EqualityComparer<'T>.Create`; the BCL added it in .NET 8
+- `Seq.toResizeArray` — single pass, pre-sized when the source is an `ICollection<'T>`
+
+### Changed
+- `Array.ofMemoryStream` moved from `Collections/Streams.fs` to `Collections/Array.fs`. Same qualified name, same behaviour: F# does not allow one module to span two files (FS0248)
+- Tests reorganised to mirror the source layout; no library change
+
 ## 1.3.0
 
 ### Removed

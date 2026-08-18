@@ -288,6 +288,22 @@ let describeRetries retryCount =
     | _      -> "gave up"
 ```
 
+### Byref
+
+```fsharp
+open TDesu.FSharp
+
+// in-place mutation through a reference -- no struct copy, nothing allocated
+let sum (xs: int[]) =
+    let mutable acc = 0
+    for x in xs do
+        Byref.add &acc x       // also sub, mul, div, setv
+    acc
+
+let mutable n = 41
+Byref.inc &n                   // 42
+```
+
 ### Collections
 
 ```fsharp
@@ -444,6 +460,33 @@ let describe (name: string) (count: int) =
         sb.ToString()
     finally
         sb.Dispose()
+```
+
+
+Allocation-free lookups, for when a miss in a hot loop should not cost an `Option`:
+
+```fsharp
+[| 1; 4; 6 |] |> Array.valueTryFind (fun x -> x % 2 = 0)      // ValueSome 4
+[| 1; 3 |]    |> Array.valueTryFind (fun x -> x % 2 = 0)      // ValueNone
+[| 1; 4; 6 |] |> Array.valueTryFindLast (fun x -> x % 2 = 0)  // ValueSome 6
+[| 1; 4 |]    |> Array.valueChooseFirst (fun x ->
+                     if x % 2 = 0 then ValueSome(string x) else ValueNone)   // ValueSome "4"
+
+[| 1; 2; 3 |] |> Seq.toResizeArray    // one pass, pre-sized from the ICollection
+```
+
+`EqualityComparer.create` exists because netstandard2.1 has no
+`EqualityComparer<'T>.Create` -- the BCL only added it in .NET 8:
+
+```fsharp
+open TDesu.FSharp.Hashing
+
+let caseInsensitive =
+    EqualityComparer.create
+        (fun (a: string) b -> String.Equals(a, b, StringComparison.OrdinalIgnoreCase))
+        (fun (s: string) -> s.ToLowerInvariant().GetHashCode())
+
+Dictionary<string, int>(caseInsensitive)
 ```
 
 ### Hashing
