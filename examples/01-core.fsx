@@ -2,6 +2,7 @@
 // pieces you reach for constantly. Run directly with `dotnet fsi examples/01-core.fsx`
 // (defaults to the built DLL), or via `dotnet fsi manage.fsx examples`.
 #load "_prelude.fsx"
+
 open Prelude
 open System
 open TDesu.FSharp
@@ -42,9 +43,21 @@ assertEqual "String.countOccurrences" 2 ("abcabc" |> String.countOccurrences "ab
 // equalsAny/containsAny/endsWithAny take a StringComparison explicitly rather than an
 // overload pair, so the comparison mode is always visible at the call site; the char[]
 // variants below have no such parameter -- a single char has no case-folding worth it.
-assertTrue "String.equalsAny matches ignoring case" ("HELLO" |> String.equalsAny StringComparison.OrdinalIgnoreCase [| "hi"; "hello" |])
-assertTrue "String.containsAny finds any of several substrings" ("hello world" |> String.containsAny StringComparison.Ordinal [| "xyz"; "world" |])
-assertTrue "String.endsWithAny checks several suffixes at once" ("report.PDF" |> String.endsWithAny StringComparison.OrdinalIgnoreCase [| ".doc"; ".pdf" |])
+assertTrue
+    "String.equalsAny matches ignoring case"
+    ("HELLO"
+     |> String.equalsAny StringComparison.OrdinalIgnoreCase [| "hi"; "hello" |])
+
+assertTrue
+    "String.containsAny finds any of several substrings"
+    ("hello world"
+     |> String.containsAny StringComparison.Ordinal [| "xyz"; "world" |])
+
+assertTrue
+    "String.endsWithAny checks several suffixes at once"
+    ("report.PDF"
+     |> String.endsWithAny StringComparison.OrdinalIgnoreCase [| ".doc"; ".pdf" |])
+
 assertTrue "String.equalsAnyChar matches a single-char string" ("x" |> String.equalsAnyChar [| 'x'; 'y' |])
 assertTrue "String.containsAnyChar finds any of several chars" ("hello" |> String.containsAnyChar [| 'z'; 'e' |])
 assertTrue "String.endsWithAnyChar checks several trailing chars" ("cat.gz" |> String.endsWithAnyChar [| 'z'; 'p' |])
@@ -60,26 +73,48 @@ assertEqual "Option.ofString blank -> None" None (Option.ofString "   ")
 // only when a predicate holds for it.
 assertEqual "Option.tryCast succeeds for a matching type" (Some "hi") (Option.tryCast<string> (box "hi"))
 assertEqual "Option.tryCast fails for a mismatched type" None (Option.tryCast<int> (box "hi"))
-assertEqual "Option.ofPredicate wraps the value when the predicate holds" (Some 5) (5 |> Option.ofPredicate (fun x -> x > 0))
+
+assertEqual
+    "Option.ofPredicate wraps the value when the predicate holds"
+    (Some 5)
+    (5 |> Option.ofPredicate (fun x -> x > 0))
+
 assertEqual "Option.ofPredicate rejects it when the predicate fails" None (-5 |> Option.ofPredicate (fun x -> x > 0))
 
 // ── ValueOption ────────────────────────────────────────────────────────
 // The struct counterpart of Option -- no allocation, meant for hot paths.
 // `ofCSharpTryPattern` adapts a TryXxx (bool * value) tuple straight from a BCL call.
-assertEqual "ValueOption.ofCSharpTryPattern success" (ValueSome 42) (Int32.TryParse "42" |> ValueOption.ofCSharpTryPattern)
+assertEqual
+    "ValueOption.ofCSharpTryPattern success"
+    (ValueSome 42)
+    (Int32.TryParse "42" |> ValueOption.ofCSharpTryPattern)
+
 assertEqual "ValueOption.ofCSharpTryPattern failure" ValueNone (Int32.TryParse "nope" |> ValueOption.ofCSharpTryPattern)
 // Same two combinators, struct-typed: ValueSome/ValueNone instead of Some/None.
 assertEqual "ValueOption.tryCast succeeds for a matching type" (ValueSome "hi") (ValueOption.tryCast<string> (box "hi"))
 assertEqual "ValueOption.tryCast fails for a mismatched type" ValueNone (ValueOption.tryCast<int> (box "hi"))
-assertEqual "ValueOption.ofPredicate wraps the value when the predicate holds" (ValueSome 5) (5 |> ValueOption.ofPredicate (fun x -> x > 0))
-assertEqual "ValueOption.ofPredicate rejects it when the predicate fails" ValueNone (-5 |> ValueOption.ofPredicate (fun x -> x > 0))
+
+assertEqual
+    "ValueOption.ofPredicate wraps the value when the predicate holds"
+    (ValueSome 5)
+    (5 |> ValueOption.ofPredicate (fun x -> x > 0))
+
+assertEqual
+    "ValueOption.ofPredicate rejects it when the predicate fails"
+    ValueNone
+    (-5 |> ValueOption.ofPredicate (fun x -> x > 0))
 
 // ── Result ─────────────────────────────────────────────────────────────
 assertEqual "Result.defaultValue on Ok" 42 (Ok 42 |> Result.defaultValue 0)
 assertEqual "Result.defaultValue on Error" 0 (Error "x" |> Result.defaultValue 0)
 assertEqual "Result.bind short-circuits on Error" (Error "boom") (Error "boom" |> Result.bind (fun v -> Ok(v + 1)))
 assertEqual "Result.ofOption mirrors Option.toResult" (Ok 42) (Result.ofOption "missing" (Some 42))
-assertEqual "Result.catch turns a thrown exception into Error" true (Result.catch (fun () -> int "not a number") |> Result.isError)
+
+assertEqual
+    "Result.catch turns a thrown exception into Error"
+    true
+    (Result.catch (fun () -> int "not a number") |> Result.isError)
+
 assertEqual "Result.catch turns success into Ok" (Ok 42) (Result.catch (fun () -> int "42"))
 
 // ── Byref: mutate a local in place, no struct copy ──────────────────────
@@ -87,8 +122,10 @@ assertEqual "Result.catch turns success into Ok" (Ok 42) (Result.catch (fun () -
 // instead of returning a new value.
 let sumInPlace (xs: int[]) =
     let mutable acc = 0
+
     for x in xs do
         Byref.add &acc x
+
     acc
 
 assertEqual "Byref.add accumulates through the reference" 15 (sumInPlace [| 1; 2; 3; 4; 5 |])

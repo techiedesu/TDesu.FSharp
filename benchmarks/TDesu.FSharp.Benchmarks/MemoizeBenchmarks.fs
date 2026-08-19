@@ -12,16 +12,13 @@ type MemoizeBenchmark() =
     let memoizedTtl = Memoize.withTtl (TimeSpan.FromMinutes 5.) plainFn
 
     [<Benchmark(Baseline = true, Description = "Plain function call")>]
-    member _.Plain() : int =
-        plainFn 42
+    member _.Plain() : int = plainFn 42
 
     [<Benchmark(Description = "Memoize.create — cache hit")>]
-    member _.MemoizeHit() : int =
-        memoized 42
+    member _.MemoizeHit() : int = memoized 42
 
     [<Benchmark(Description = "Memoize.withTtl — cache hit")>]
-    member _.MemoizeTtlHit() : int =
-        memoizedTtl 42
+    member _.MemoizeTtlHit() : int = memoizedTtl 42
 
     [<Benchmark(Description = "Memoize.create — cache miss (new key each call)")>]
     member this.MemoizeMiss() : int =

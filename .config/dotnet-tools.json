@@ -8,6 +8,13 @@
         "fsdocs"
       ],
       "rollForward": false
+    },
+    "tdesu.fsharp.funtomatoes.unreleased": {
+      "version": "0.1.0-alpha.5.ci.33",
+      "commands": [
+        "funtomatoes"
+      ],
+      "rollForward": false
     }
   }
 }

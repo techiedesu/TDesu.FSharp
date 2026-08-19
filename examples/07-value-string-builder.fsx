@@ -3,6 +3,7 @@
 // tradeoff that keeps the BCL's own System.Text.ValueStringBuilder internal, so it comes with
 // hard restrictions this file exists to demonstrate correctly, not to work around.
 #load "_prelude.fsx"
+
 open Prelude
 open System
 open TDesu.FSharp.Buffers
@@ -22,6 +23,7 @@ open TDesu.FSharp.Buffers
 let describe (name: string) (count: int) =
     let buffer = Array.zeroCreate<char> 64
     let mutable sb = ValueStringBuilder(Span<char>(buffer))
+
     try
         sb.Append("name=")
         sb.Append(name)
@@ -31,7 +33,8 @@ let describe (name: string) (count: int) =
     finally
         sb.Dispose()
 
-assertEqual "ValueStringBuilder builds a string from statement-style Append calls"
+assertEqual
+    "ValueStringBuilder builds a string from statement-style Append calls"
     "name=widget, count=3"
     (describe "widget" 3)
 
@@ -40,16 +43,19 @@ assertEqual "ValueStringBuilder builds a string from statement-style Append call
 let buildLong () =
     let buffer = Array.zeroCreate<char> 4 // deliberately too small -- forces a Grow()
     let mutable sb = ValueStringBuilder(Span<char>(buffer))
+
     try
         for _ in 1..20 do
             sb.Append('x')
+
         sb.AppendLine()
         sb.Append("done")
         sb.ToString()
     finally
         sb.Dispose()
 
-assertEqual "ValueStringBuilder grows into the pool past its initial buffer without losing data"
+assertEqual
+    "ValueStringBuilder grows into the pool past its initial buffer without losing data"
     (String('x', 20) + Environment.NewLine + "done")
     (buildLong ())
 
@@ -57,13 +63,15 @@ assertEqual "ValueStringBuilder grows into the pool past its initial buffer with
 // for call sites with no convenient stack buffer to hand in.
 let buildPooled () =
     let mutable sb = ValueStringBuilder(8)
+
     try
         sb.Append("pooled from the start")
         sb.ToString()
     finally
         sb.Dispose()
 
-assertEqual "ValueStringBuilder(initialCapacity) rents its whole buffer from the pool"
+assertEqual
+    "ValueStringBuilder(initialCapacity) rents its whole buffer from the pool"
     "pooled from the start"
     (buildPooled ())
 

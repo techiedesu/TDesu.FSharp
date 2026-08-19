@@ -12,8 +12,8 @@ let main args =
             .Create(DefaultConfig.Instance)
             .WithOptions(ConfigOptions.DisableOptimizationsValidator)
             .AddJob(Job.ShortRun.WithToolchain(InProcessEmitToolchain.Instance))
-    BenchmarkSwitcher
-        .FromAssembly(typeof<BytesConcatBenchmark>.Assembly)
-        .Run(args, config)
+
+    BenchmarkSwitcher.FromAssembly(typeof<BytesConcatBenchmark>.Assembly).Run(args, config)
     |> ignore
+
     0

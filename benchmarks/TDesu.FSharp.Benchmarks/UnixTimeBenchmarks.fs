@@ -12,13 +12,10 @@ type UnixTimeBenchmark() =
         DateTimeOffset.UtcNow.ToUnixTimeSeconds()
 
     [<Benchmark(Description = "UnixTime.seconds() (cached Stopwatch)")>]
-    member _.CachedStopwatch() : int64 =
-        UnixTime.seconds ()
+    member _.CachedStopwatch() : int64 = UnixTime.seconds ()
 
     [<Benchmark(Description = "UnixTime.seconds32()")>]
-    member _.CachedInt32() : int32 =
-        UnixTime.seconds32 ()
+    member _.CachedInt32() : int32 = UnixTime.seconds32 ()
 
     [<Benchmark(Description = "DateTimeOffset.UtcNow (full object)")>]
-    member _.FullDateTimeOffset() : DateTimeOffset =
-        DateTimeOffset.UtcNow
+    member _.FullDateTimeOffset() : DateTimeOffset = DateTimeOffset.UtcNow

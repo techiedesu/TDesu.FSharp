@@ -3,7 +3,6 @@ root = true
 [{*.fs,*.json}]
 indent_style = space
 indent_size = 4
-end_of_line = unset
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
@@ -16,3 +15,13 @@ insert_final_newline = true
 indent_style = space
 indent_size = 4
 trim_trailing_whitespace = true
+
+# Formatting is enforced by Funtomatoes (see .config/dotnet-tools.json).
+# These are written out rather than inherited so that a tool upgrade cannot
+# reformat the repository behind our backs.
+[*.{fs,fsi,fsx}]
+max_line_length = 120
+fsharp_multiline_bracket_style = stroustrup
+fsharp_bar_before_discriminated_union_declaration = true
+fsharp_multi_line_lambda_closing_newline = true
+fsharp_keep_max_number_of_blank_lines = 1

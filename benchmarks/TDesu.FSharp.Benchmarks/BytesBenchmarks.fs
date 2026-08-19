@@ -31,6 +31,7 @@ type BytesXorBenchmark() =
     member _.ManualXor() : byte[] =
         for i = 0 to a.Length - 1 do
             dst[i] <- a[i] ^^^ b[i]
+
         dst
 
     [<Benchmark(Description = "Bytes.xorBlock")>]

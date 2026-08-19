@@ -3,6 +3,7 @@
 // for request bodies and other untrusted sources where a byte cap is a real limit, not a
 // suggestion. Uses MemoryStream throughout; no real files are touched.
 #load "_prelude.fsx"
+
 open Prelude
 open System.Text
 open System.Threading
@@ -14,7 +15,12 @@ let copyWithinCap () =
     let payload = Encoding.UTF8.GetBytes "hello world"
     use source = new System.IO.MemoryStream(payload)
     use destination = new System.IO.MemoryStream()
-    let result = source |> Stream.copyUpTo 1024L destination CancellationToken.None |> Task.getResult
+
+    let result =
+        source
+        |> Stream.copyUpTo 1024L destination CancellationToken.None
+        |> Task.getResult
+
     result, destination.ToArray() |> Encoding.UTF8.GetString
 
 let okResult, copiedText = copyWithinCap ()
@@ -25,13 +31,20 @@ assertEqual "Stream.copyUpTo actually wrote every byte through to the destinatio
 // write. The chunk that would push the total over the limit is discarded rather than
 // partially written, so BytesWritten never counts a chunk that didn't make it across.
 let copyOverCap () =
-    let payload = Encoding.UTF8.GetBytes "this payload is way too long for an 8-byte cap"
+    let payload =
+        Encoding.UTF8.GetBytes "this payload is way too long for an 8-byte cap"
+
     use source = new System.IO.MemoryStream(payload)
     use destination = new System.IO.MemoryStream()
-    source |> Stream.copyUpTo 8L destination CancellationToken.None |> Task.getResult
+
+    source
+    |> Stream.copyUpTo 8L destination CancellationToken.None
+    |> Task.getResult
 
 let expectedExceeded: Stream.MaxBytesExceeded = { MaxBytes = 8L; BytesWritten = 0L }
-assertEqual "Stream.copyUpTo reports Error once the source would exceed the cap"
+
+assertEqual
+    "Stream.copyUpTo reports Error once the source would exceed the cap"
     (Error expectedExceeded)
     (copyOverCap ())
 

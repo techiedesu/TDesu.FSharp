@@ -7,13 +7,12 @@ open BenchmarkDotNet.Attributes
 open TDesu.FSharp.Buffers
 
 #nowarn "9" // NativePtr.stackalloc — used once per benchmark call, directly in the calling
-            // method (never in a loop, never returned) — see ValueStringBuilder's XML docs.
+// method (never in a loop, never returned) — see ValueStringBuilder's XML docs.
 
 [<AutoOpen>]
 module private ValueStringBuilderBenchmarkHelpers =
     /// Deterministic, readable payload character for position i ('a'..'z' repeating).
-    let inline charAt (i: int) : char =
-        char (int 'a' + (i % 26))
+    let inline charAt (i: int) : char = char (int 'a' + (i % 26))
 
 /// <summary>
 /// Decides the ValueStringBuilder question empirically: compares it against
@@ -31,17 +30,21 @@ type ValueStringBuilderBenchmark() =
     [<Benchmark(Baseline = true, Description = "System.Text.StringBuilder, char-by-char")>]
     member this.StringBuilderAppend() : string =
         let sb = StringBuilder()
+
         for i = 0 to this.Size - 1 do
             sb.Append(charAt i) |> ignore
+
         sb.ToString()
 
     [<Benchmark(Description = "ValueStringBuilder (256-char stackalloc), char-by-char")>]
     member this.ValueStringBuilderAppend() : string =
         let buffer = NativePtr.stackalloc<char> 256
         let mutable sb = ValueStringBuilder(Span<char>(NativePtr.toVoidPtr buffer, 256))
+
         try
             for i = 0 to this.Size - 1 do
                 sb.Append(charAt i)
+
             sb.ToString()
         finally
             sb.Dispose()
@@ -49,8 +52,10 @@ type ValueStringBuilderBenchmark() =
     [<Benchmark(Description = "Plain String.Concat (+) accumulation, char-by-char")>]
     member this.PlainConcat() : string =
         let mutable result = ""
+
         for i = 0 to this.Size - 1 do
             result <- result + string (charAt i)
+
         result
 
 /// <summary>
@@ -70,17 +75,21 @@ type ValueStringBuilderLargeOutputBenchmark() =
     [<Benchmark(Baseline = true, Description = "System.Text.StringBuilder, char-by-char")>]
     member this.StringBuilderAppend() : string =
         let sb = StringBuilder()
+
         for i = 0 to this.Size - 1 do
             sb.Append(charAt i) |> ignore
+
         sb.ToString()
 
     [<Benchmark(Description = "ValueStringBuilder (256-char stackalloc), char-by-char")>]
     member this.ValueStringBuilderAppend() : string =
         let buffer = NativePtr.stackalloc<char> 256
         let mutable sb = ValueStringBuilder(Span<char>(NativePtr.toVoidPtr buffer, 256))
+
         try
             for i = 0 to this.Size - 1 do
                 sb.Append(charAt i)
+
             sb.ToString()
         finally
             sb.Dispose()

@@ -15,12 +15,10 @@ type ContentHashBenchmark() =
         alg.ComputeHash(data)
 
     [<Benchmark(Description = "ContentHash.sha256")>]
-    member _.ContentHashSha256() =
-        ContentHash.sha256 data
+    member _.ContentHashSha256() = ContentHash.sha256 data
 
     [<Benchmark(Description = "ContentHash.sha256HexBytes")>]
-    member _.ContentHashHex() =
-        ContentHash.sha256HexBytes data
+    member _.ContentHashHex() = ContentHash.sha256HexBytes data
 
 [<MemoryDiagnoser; RankColumn>]
 type HashCombineBenchmark() =
@@ -31,5 +29,4 @@ type HashCombineBenchmark() =
         items |> Array.fold (fun h x -> h * 31 + x) 0
 
     [<Benchmark(Description = "Hash.ofArray (System.HashCode)")>]
-    member _.HashOfArray() : int =
-        Hash.ofArray items
+    member _.HashOfArray() : int = Hash.ofArray items

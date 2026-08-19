@@ -11,13 +11,19 @@ type BoundedDictBenchmark() =
     [<Benchmark(Baseline = true, Description = "Dictionary (no bound)")>]
     member _.PlainDict() : int =
         let d = Dictionary<int, int>()
-        for i in 0..999 do d[i] <- i * 2
+
+        for i in 0..999 do
+            d[i] <- i * 2
+
         d.Count
 
     [<Benchmark(Description = "BoundedDict (cap=500)")>]
     member _.BoundedDict500() : int =
         let d = BoundedDict<int, int>(500)
-        for i in 0..999 do d.Set(i, i * 2)
+
+        for i in 0..999 do
+            d.Set(i, i * 2)
+
         d.Count
 
 [<MemoryDiagnoser; RankColumn>]
