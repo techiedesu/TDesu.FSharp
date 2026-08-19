@@ -74,7 +74,7 @@ type ByrefTests() =
         // ARRANGE
         let mutable counter = 0
         // ACT
-        for _ in 1 .. 100 do
+        for _ in 1..100 do
             Byref.inc &counter
         // ASSERT
         equals counter 100

@@ -83,7 +83,8 @@ type ArrayValueOptionTests() =
         // ARRANGE
         let source: string[] = null
         // ACT
-        let result = Array.valueChooseFirst (fun (s: string) -> if s.Length > 2 then ValueSome s.Length else ValueNone) source
+        let result =
+            Array.valueChooseFirst (fun (s: string) -> if s.Length > 2 then ValueSome s.Length else ValueNone) source
         // ASSERT
         equals result ValueNone
 
@@ -101,7 +102,8 @@ type ArrayValueOptionTests() =
         // ARRANGE
         let source = [| "a"; "bb"; "ccc" |]
         // ACT
-        let result = Array.valueChooseFirst (fun (s: string) -> if s.Length > 10 then ValueSome s else ValueNone) source
+        let result =
+            Array.valueChooseFirst (fun (s: string) -> if s.Length > 10 then ValueSome s else ValueNone) source
         // ASSERT
         equals result ValueNone
 
@@ -110,7 +112,8 @@ type ArrayValueOptionTests() =
         // ARRANGE
         let source = [| "a"; "bb"; "ccc"; "dddd" |]
         // ACT
-        let result = Array.valueChooseFirst (fun (s: string) -> if s.Length >= 2 then ValueSome s else ValueNone) source
+        let result =
+            Array.valueChooseFirst (fun (s: string) -> if s.Length >= 2 then ValueSome s else ValueNone) source
         // ASSERT
         equals result (ValueSome "bb")
 
@@ -137,7 +140,8 @@ type ArrayValueOptionTests() =
         // ARRANGE
         let source = [| "a"; "bb"; "ccc" |]
         // ACT
-        let result = Array.valueChooseLast (fun (s: string) -> if s.Length > 10 then ValueSome s else ValueNone) source
+        let result =
+            Array.valueChooseLast (fun (s: string) -> if s.Length > 10 then ValueSome s else ValueNone) source
         // ASSERT
         equals result ValueNone
 
@@ -146,6 +150,7 @@ type ArrayValueOptionTests() =
         // ARRANGE
         let source = [| "a"; "bb"; "ccc"; "dddd" |]
         // ACT
-        let result = Array.valueChooseLast (fun (s: string) -> if s.Length >= 2 then ValueSome s else ValueNone) source
+        let result =
+            Array.valueChooseLast (fun (s: string) -> if s.Length >= 2 then ValueSome s else ValueNone) source
         // ASSERT
         equals result (ValueSome "dddd")

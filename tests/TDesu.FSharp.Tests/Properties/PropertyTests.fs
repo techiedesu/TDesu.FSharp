@@ -23,8 +23,10 @@ type ResultPropertyTests() =
     [<Test>]
     member _.``Result.map composition``() =
         check (fun (x: Result<int, string>) ->
-            let f = (+) 1 in let g = (*) 2
-            Result.map (f >> g) x = (Result.map f >> Result.map g) x)
+            let f = (+) 1 in
+            let g = (*) 2
+            Result.map (f >> g) x = (Result.map f >> Result.map g) x
+        )
 
     [<Test>]
     member _.``Result.bind Ok = id``() =
@@ -57,7 +59,11 @@ type OptionPropertyTests() =
     member _.``Option.zip symmetry``() =
         check2 (fun (a: int option) (b: string option) ->
             let z = Option.zip a b
-            match a, b with Some _, Some _ -> z.IsSome | _ -> z.IsNone)
+
+            match a, b with
+            | Some _, Some _ -> z.IsSome
+            | _ -> z.IsNone
+        )
 
     [<Test>]
     member _.``Option.toResult roundtrip for Some``() =
@@ -82,11 +88,16 @@ type StringPropertyTests() =
     member _.``String.split then join roundtrip``() =
         check (fun (NonNull s) ->
             let parts = s |> String.split ","
-            String.join "," parts = s)
+            String.join "," parts = s
+        )
 
     [<Test>]
     member _.``String.toOption None for empty``() =
-        isTrue (String.toOption "" = None && String.toOption null = None && String.toOption "  " = None)
+        isTrue (
+            String.toOption "" = None
+            && String.toOption null = None
+            && String.toOption "  " = None
+        )
 
 [<TestFixture>]
 type BytesPropertyTests() =
@@ -94,8 +105,11 @@ type BytesPropertyTests() =
     [<Test>]
     member _.``Bytes.concat2 length = sum``() =
         check2 (fun (a: byte[]) (b: byte[]) ->
-            if isNull a || isNull b then true  // skip nulls
-            else (Bytes.concat2 a b).Length = a.Length + b.Length)
+            if isNull a || isNull b then
+                true // skip nulls
+            else
+                (Bytes.concat2 a b).Length = a.Length + b.Length
+        )
 
     [<Test>]
     member _.``Bytes.xor self = zeros``() =
@@ -105,8 +119,12 @@ type BytesPropertyTests() =
     member _.``Bytes.xor is commutative``() =
         check2 (fun (a: byte[]) (b: byte[]) ->
             let n = min a.Length b.Length
-            if n > 0 then Bytes.xor a[..n-1] b[..n-1] = Bytes.xor b[..n-1] a[..n-1]
-            else true)
+
+            if n > 0 then
+                Bytes.xor a[.. n - 1] b[.. n - 1] = Bytes.xor b[.. n - 1] a[.. n - 1]
+            else
+                true
+        )
 
     [<Test>]
     member _.``Bytes.constantTimeEquals is reflexive``() =
@@ -158,25 +176,39 @@ type BoundedCollectionPropertyTests() =
         check2 (fun (PositiveInt cap) (items: int list) ->
             let cap = min cap 100
             let q = BoundedQueue<int>(cap)
-            for item in items do q.Enqueue(item)
-            q.Count <= cap)
+
+            for item in items do
+                q.Enqueue(item)
+
+            q.Count <= cap
+        )
 
     [<Test>]
     member _.``BoundedDict never exceeds capacity``() =
         check2 (fun (PositiveInt cap) (items: (int * int) list) ->
             let cap = min cap 100
             let d = BoundedDict<int, int>(cap)
-            for (k, v) in items do d.Set(k, v)
-            d.Count <= cap)
+
+            for (k, v) in items do
+                d.Set(k, v)
+
+            d.Count <= cap
+        )
 
     [<Test>]
     member _.``AtomicInt increment decrement cancel``() =
         check (fun (PositiveInt n) ->
             let n = min n 1000
             let a = AtomicInt(0)
-            for _ in 1..n do a.Increment() |> ignore
-            for _ in 1..n do a.Decrement() |> ignore
-            a.Value = 0)
+
+            for _ in 1..n do
+                a.Increment() |> ignore
+
+            for _ in 1..n do
+                a.Decrement() |> ignore
+
+            a.Value = 0
+        )
 
     [<Test>]
     member _.``SnapshotThrottle triggers at threshold``() =
@@ -184,5 +216,10 @@ type BoundedCollectionPropertyTests() =
             let t = min threshold 100
             let snap = SnapshotThrottle(t)
             let mutable triggered = false
-            for _ in 1..t do if snap.Record() then triggered <- true
-            triggered)
+
+            for _ in 1..t do
+                if snap.Record() then
+                    triggered <- true
+
+            triggered
+        )

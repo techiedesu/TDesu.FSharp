@@ -19,6 +19,7 @@ type private Spy(name: string, throwOnDispose: bool) =
     interface IDisposable with
         member _.Dispose() =
             count <- count + 1
+
             if throwOnDispose then
                 raise (InvalidOperationException($"dispose failed: {name}"))
 
@@ -34,7 +35,7 @@ type DisposableCombineTests() =
         let combined = Disposable.combine [ first; second; third ]
 
         // ACT
-        % Assert.Throws<InvalidOperationException>(fun () -> combined.Dispose())
+        %Assert.Throws<InvalidOperationException>(fun () -> combined.Dispose())
 
         // ASSERT
         equals first.DisposeCount 1
@@ -108,6 +109,7 @@ type private CountingStream(payload: byte[]) =
     inherit MemoryStream(payload)
     let mutable disposeCount = 0
     member _.DisposeCount = disposeCount
+
     override _.Dispose(disposing) =
         disposeCount <- disposeCount + 1
         base.Dispose(disposing)
@@ -123,7 +125,10 @@ type StreamCopyUpToTests() =
         use destination = new MemoryStream()
 
         // ACT
-        let result = source |> Stream.copyUpTo 100L destination CancellationToken.None |> Task.getResult
+        let result =
+            source
+            |> Stream.copyUpTo 100L destination CancellationToken.None
+            |> Task.getResult
 
         // ASSERT
         match result with
@@ -138,7 +143,10 @@ type StreamCopyUpToTests() =
         use destination = new MemoryStream()
 
         // ACT
-        let result = source |> Stream.copyUpTo 100L destination CancellationToken.None |> Task.getResult
+        let result =
+            source
+            |> Stream.copyUpTo 100L destination CancellationToken.None
+            |> Task.getResult
 
         // ASSERT
         match result with
@@ -152,10 +160,17 @@ type StreamCopyUpToTests() =
         use destination = new MemoryStream()
 
         // ACT
-        let result = source |> Stream.copyUpTo 0L destination CancellationToken.None |> Task.getResult
+        let result =
+            source
+            |> Stream.copyUpTo 0L destination CancellationToken.None
+            |> Task.getResult
 
         // ASSERT
-        isTrue (match result with Error _ -> true | Ok _ -> false)
+        isTrue (
+            match result with
+            | Error _ -> true
+            | Ok _ -> false
+        )
 
     [<Test>]
     member _.``an empty source succeeds with zero bytes written``() =
@@ -164,7 +179,10 @@ type StreamCopyUpToTests() =
         use destination = new MemoryStream()
 
         // ACT
-        let result = source |> Stream.copyUpTo 100L destination CancellationToken.None |> Task.getResult
+        let result =
+            source
+            |> Stream.copyUpTo 100L destination CancellationToken.None
+            |> Task.getResult
 
         // ASSERT
         match result with
@@ -177,10 +195,13 @@ type StreamCopyUpToTests() =
         use destination = new MemoryStream()
 
         // ACT
-        let act () = (null: Stream) |> Stream.copyUpTo 100L destination CancellationToken.None |> ignore
+        let act () =
+            (null: Stream)
+            |> Stream.copyUpTo 100L destination CancellationToken.None
+            |> ignore
 
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(fun () -> act ())
+        %Assert.Throws<ArgumentNullException>(fun () -> act ())
 
     [<Test>]
     member _.``a null destination throws ArgumentNullException, not NullReferenceException``() =
@@ -188,10 +209,11 @@ type StreamCopyUpToTests() =
         use source = new MemoryStream([| 1uy |])
 
         // ACT
-        let act () = source |> Stream.copyUpTo 100L (null: Stream) CancellationToken.None |> ignore
+        let act () =
+            source |> Stream.copyUpTo 100L (null: Stream) CancellationToken.None |> ignore
 
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(fun () -> act ())
+        %Assert.Throws<ArgumentNullException>(fun () -> act ())
 
     [<Test>]
     member _.``cancellation surfaces and leaves the caller's streams open``() =
@@ -203,10 +225,14 @@ type StreamCopyUpToTests() =
         cts.Cancel()
 
         // ACT
-        let act () = source |> Stream.copyUpTo 10_000_000L destination cts.Token |> Task.getResult |> ignore
+        let act () =
+            source
+            |> Stream.copyUpTo 10_000_000L destination cts.Token
+            |> Task.getResult
+            |> ignore
 
         // ASSERT
-        % Assert.Throws<TaskCanceledException>(fun () -> act ())
+        %Assert.Throws<TaskCanceledException>(fun () -> act ())
         equals source.DisposeCount 0
 
     [<Test>]
@@ -216,8 +242,16 @@ type StreamCopyUpToTests() =
         use destination = new MemoryStream()
 
         // ACT
-        let result = source |> Stream.copyUpTo 100L destination CancellationToken.None |> Task.getResult
+        let result =
+            source
+            |> Stream.copyUpTo 100L destination CancellationToken.None
+            |> Task.getResult
 
         // ASSERT
-        isTrue (match result with Ok _ -> true | Error _ -> false)
+        isTrue (
+            match result with
+            | Ok _ -> true
+            | Error _ -> false
+        )
+
         equals source.DisposeCount 0

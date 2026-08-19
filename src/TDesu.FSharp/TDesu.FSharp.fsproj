@@ -50,7 +50,13 @@
         <Compile Include="IO\Env.fs" />
         <Compile Include="IO\Stream.fs" />
         <Compile Include="IO\Disposable.fs" />
-        <Compile Include="Concurrency\Concurrency.fs" />
+        <Compile Include="Concurrency\CancellationToken.fs" />
+        <Compile Include="Concurrency\Atomics.fs" />
+        <Compile Include="Concurrency\Signal.fs" />
+        <Compile Include="Concurrency\BoundedQueue.fs" />
+        <Compile Include="Concurrency\BoundedDict.fs" />
+        <Compile Include="Concurrency\PeriodicTimer.fs" />
+        <Compile Include="Concurrency\SnapshotThrottle.fs" />
         <Compile Include="Concurrency\ChannelWorker.fs" />
         <Compile Include="Concurrency\RateLimiting.fs" />
         <Compile Include="Core\StateMachine.fs" />

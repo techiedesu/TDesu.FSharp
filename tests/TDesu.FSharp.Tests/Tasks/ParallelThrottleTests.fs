@@ -14,14 +14,21 @@ type ParallelThrottleSafetyTests() =
     member _.``a throwing mapping function surfaces without leaving unobserved exceptions``() =
         // ARRANGE
         let mutable unobserved = 0
-        let handler = EventHandler<UnobservedTaskExceptionEventArgs>(fun _ _ -> Interlocked.Increment(&unobserved) |> ignore)
+
+        let handler =
+            EventHandler<UnobservedTaskExceptionEventArgs>(fun _ _ -> Interlocked.Increment(&unobserved) |> ignore)
+
         TaskScheduler.UnobservedTaskException.AddHandler handler
         let items = [ 1; 2; 3; 4 ]
-        let f i = task { return if i = 3 then failwith "boom" else i }
+
+        let f i =
+            task { return if i = 3 then failwith "boom" else i }
 
         // ACT
-        let act () = Task.parallelThrottle 2 items f |> Task.getResult |> ignore
-        % Assert.Throws<Exception>(fun () -> act ())
+        let act () =
+            Task.parallelThrottle 2 items f |> Task.getResult |> ignore
+
+        %Assert.Throws<Exception>(fun () -> act ())
         GC.Collect()
         GC.WaitForPendingFinalizers()
         GC.Collect()
@@ -36,7 +43,8 @@ type ParallelThrottleSafetyTests() =
         let items: int list = []
 
         // ACT
-        let result = Task.parallelThrottle 4 items (fun i -> task { return i }) |> Task.getResult
+        let result =
+            Task.parallelThrottle 4 items (fun i -> task { return i }) |> Task.getResult
 
         // ASSERT
         equals result.Length 0
@@ -47,7 +55,8 @@ type ParallelThrottleSafetyTests() =
         let items: int seq = null
 
         // ACT
-        let result = Task.parallelThrottle 4 items (fun i -> task { return i }) |> Task.getResult
+        let result =
+            Task.parallelThrottle 4 items (fun i -> task { return i }) |> Task.getResult
 
         // ASSERT
         equals result.Length 0
@@ -58,7 +67,9 @@ type ParallelThrottleSafetyTests() =
         let items = [ 1; 2; 3 ]
 
         // ACT
-        let result = Task.parallelThrottle 1 items (fun i -> task { return i * 10 }) |> Task.getResult
+        let result =
+            Task.parallelThrottle 1 items (fun i -> task { return i * 10 })
+            |> Task.getResult
 
         // ASSERT
         equals (List.ofArray result) [ 10; 20; 30 ]

@@ -26,7 +26,9 @@ module TestHelpers =
         | Error e -> Assert.Fail($"Expected Ok({expected}) but got Error({e})")
 
     let inline isError (v: Result<_, _>) =
-        match v with Error _ -> () | Ok v -> Assert.Fail($"Expected Error but got Ok({v})")
+        match v with
+        | Error _ -> ()
+        | Ok v -> Assert.Fail($"Expected Error but got Ok({v})")
 
     let inline isErrorWith (expected: 'e) (v: Result<_, 'e>) =
         match v with

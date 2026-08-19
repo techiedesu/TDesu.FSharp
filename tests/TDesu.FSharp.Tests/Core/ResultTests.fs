@@ -10,13 +10,14 @@ type ResultTests() =
 
     [<Test>]
     member _.``get throws on Error``() =
-        % Assert.Throws<InvalidOperationException>(fun () -> % Result.get (Error "fail"))
+        %Assert.Throws<InvalidOperationException>(fun () -> %Result.get(Error "fail"))
 
     [<Test>]
     member _.``catch wraps exceptions``() =
         match Result.catch (fun () -> 42) with
         | Ok v -> equals v 42
         | Error _ -> Assert.Fail("Expected Ok")
+
         match Result.catch (fun () -> failwith "boom") with
         | Error e -> equals e.Message "boom"
         | Ok _ -> Assert.Fail("Expected Error")

@@ -63,26 +63,22 @@ type SlidingWindowLimiterTests() =
 
     [<Test>]
     member _.``rejects zero maxRequests``() =
-        Assert.Throws<ArgumentException>(fun () ->
-            SlidingWindowLimiter(0, TimeSpan.FromSeconds 1.) |> ignore)
+        Assert.Throws<ArgumentException>(fun () -> SlidingWindowLimiter(0, TimeSpan.FromSeconds 1.) |> ignore)
         |> ignore
 
     [<Test>]
     member _.``rejects negative maxRequests``() =
-        Assert.Throws<ArgumentException>(fun () ->
-            SlidingWindowLimiter(-1, TimeSpan.FromSeconds 1.) |> ignore)
+        Assert.Throws<ArgumentException>(fun () -> SlidingWindowLimiter(-1, TimeSpan.FromSeconds 1.) |> ignore)
         |> ignore
 
     [<Test>]
     member _.``rejects zero window``() =
-        Assert.Throws<ArgumentException>(fun () ->
-            SlidingWindowLimiter(10, TimeSpan.Zero) |> ignore)
+        Assert.Throws<ArgumentException>(fun () -> SlidingWindowLimiter(10, TimeSpan.Zero) |> ignore)
         |> ignore
 
     [<Test>]
     member _.``rejects negative window``() =
-        Assert.Throws<ArgumentException>(fun () ->
-            SlidingWindowLimiter(10, TimeSpan.FromSeconds -1.) |> ignore)
+        Assert.Throws<ArgumentException>(fun () -> SlidingWindowLimiter(10, TimeSpan.FromSeconds -1.) |> ignore)
         |> ignore
 
     [<Test>]

@@ -13,6 +13,7 @@ type TaskResultTests() =
     member _.``bind short-circuits on Error``() =
         let r =
             errTask "fail"
-            |> TaskResult.bind (fun v -> Task.FromResult(Ok(v * 2) : Result<int, string>))
+            |> TaskResult.bind (fun v -> Task.FromResult(Ok(v * 2): Result<int, string>))
             |> Task.getResult
+
         isError r

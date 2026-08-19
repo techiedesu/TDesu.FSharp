@@ -18,5 +18,4 @@ type TaskTests() =
         | Ok _ -> Assert.Fail("Expected Error")
 
     [<Test>]
-    member _.``runSynchronously handles null task``() =
-        Task.runSynchronously (null: Task)  // should not throw
+    member _.``runSynchronously handles null task``() = Task.runSynchronously (null: Task) // should not throw

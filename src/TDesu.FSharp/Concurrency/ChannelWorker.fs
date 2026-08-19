@@ -31,8 +31,11 @@ module ChannelWorker =
         /// <param name="item">The item to enqueue for processing.</param>
         member _.Post(item: 'T) =
             queue.Enqueue(item)
-            try signal.Release() |> ignore
-            with :? System.ObjectDisposedException -> ()
+
+            try
+                signal.Release() |> ignore
+            with :? System.ObjectDisposedException ->
+                ()
 
         /// Current number of queued (unprocessed) items.
         member _.PendingCount = queue.Count
@@ -54,20 +57,28 @@ module ChannelWorker =
     let start (handler: 'T -> Task) (onError: exn -> unit) (ct: CancellationToken) : Handle<'T> =
         let queue = ConcurrentQueue<'T>()
         let signal = new SemaphoreSlim(0)
-        let workerTask = task {
-            try
+
+        let workerTask =
+            task {
                 try
-                    while not ct.IsCancellationRequested do
-                        do! signal.WaitAsync(ct)
-                        match queue.TryDequeue() with
-                        | true, item ->
-                            try
-                                do! handler item
-                            with ex ->
-                                try onError ex with _ -> ()
-                        | _ -> ()
-                with :? System.OperationCanceledException -> ()
-            finally
-                signal.Dispose()
-        }
+                    try
+                        while not ct.IsCancellationRequested do
+                            do! signal.WaitAsync(ct)
+
+                            match queue.TryDequeue() with
+                            | true, item ->
+                                try
+                                    do! handler item
+                                with ex ->
+                                    try
+                                        onError ex
+                                    with _ ->
+                                        ()
+                            | _ -> ()
+                    with :? System.OperationCanceledException ->
+                        ()
+                finally
+                    signal.Dispose()
+            }
+
         Handle(queue, signal, workerTask)

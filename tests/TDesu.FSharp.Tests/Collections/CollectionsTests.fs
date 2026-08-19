@@ -15,18 +15,20 @@ type DictionaryHardeningTests() =
         // ARRANGE
         let d: Dictionary<string, int> = null
         // ACT
-        let act () = Dictionary.getValue "missing" d |> ignore
+        let act () =
+            Dictionary.getValue "missing" d |> ignore
         // ASSERT
-        % Assert.Throws<KeyNotFoundException>(act)
+        %Assert.Throws<KeyNotFoundException>(act)
 
     [<Test>]
     member _.``getValue on empty dictionary throws KeyNotFoundException``() =
         // ARRANGE
         let d = Dictionary<string, int>()
         // ACT
-        let act () = Dictionary.getValue "missing" d |> ignore
+        let act () =
+            Dictionary.getValue "missing" d |> ignore
         // ASSERT
-        % Assert.Throws<KeyNotFoundException>(act)
+        %Assert.Throws<KeyNotFoundException>(act)
 
     [<Test>]
     member _.``tryGetValue on null dictionary returns None``() =
@@ -73,7 +75,6 @@ type DictionaryHardeningTests() =
         // ASSERT
         equals result 99
 
-
 [<TestFixture>]
 type StackHardeningTests() =
 
@@ -102,7 +103,7 @@ type StackHardeningTests() =
         // ACT
         let act () = Stack.pop stack |> ignore
         // ASSERT
-        % Assert.Throws<InvalidOperationException>(act)
+        %Assert.Throws<InvalidOperationException>(act)
 
     [<Test>]
     member _.``pop on empty stack throws InvalidOperationException``() =
@@ -111,7 +112,7 @@ type StackHardeningTests() =
         // ACT
         let act () = Stack.pop stack |> ignore
         // ASSERT
-        % Assert.Throws<InvalidOperationException>(act)
+        %Assert.Throws<InvalidOperationException>(act)
 
     [<Test>]
     member _.``push onto null stack throws ArgumentNullException``() =
@@ -120,7 +121,7 @@ type StackHardeningTests() =
         // ACT
         let act () = Stack.push 1 stack
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``reverse of null stack yields an empty stack``() =
@@ -142,7 +143,6 @@ type StackHardeningTests() =
         let result = Stack.reverse stack
         // ASSERT
         equals (result |> Seq.toList) [ 1; 2; 3 ]
-
 
 [<TestFixture>]
 type SeqHardeningTests() =
@@ -214,6 +214,7 @@ type SeqHardeningTests() =
     member _.``tryMaxBy enumerates the source exactly once``() =
         // ARRANGE
         let mutable enumerations = 0
+
         let source =
             seq {
                 for x in [ 3; 1; 4; 1; 5; 9; 2; 6 ] do
@@ -231,14 +232,16 @@ type SeqHardeningTests() =
         // ARRANGE
         let source = [ 1; 2; 3 ]
         // ACT
-        let act () = Seq.tryMaxBy (fun x -> if x = 2 then failwith "boom" else x) source |> ignore
+        let act () =
+            Seq.tryMaxBy (fun x -> if x = 2 then failwith "boom" else x) source |> ignore
         // ASSERT
-        % Assert.Throws<Exception>(act)
+        %Assert.Throws<Exception>(act)
 
     [<Test>]
     member _.``tryMaxBy disposes the enumerator even when the projection throws``() =
         // ARRANGE
         let mutable disposed = false
+
         let source: int seq =
             seq {
                 try
@@ -247,9 +250,10 @@ type SeqHardeningTests() =
                     disposed <- true
             }
         // ACT
-        let act () = Seq.tryMaxBy (fun x -> if x = 2 then failwith "boom" else x) source |> ignore
+        let act () =
+            Seq.tryMaxBy (fun x -> if x = 2 then failwith "boom" else x) source |> ignore
         // ASSERT
-        % Assert.Throws<Exception>(act)
+        %Assert.Throws<Exception>(act)
         isTrue disposed
 
     [<Test>]
@@ -293,10 +297,10 @@ type SeqHardeningTests() =
         // ARRANGE
         let source = [ 1; 2; 3 ]
         // ACT
-        let act () = Seq.tryMinBy (fun x -> if x = 2 then failwith "boom" else x) source |> ignore
+        let act () =
+            Seq.tryMinBy (fun x -> if x = 2 then failwith "boom" else x) source |> ignore
         // ASSERT
-        % Assert.Throws<Exception>(act)
-
+        %Assert.Throws<Exception>(act)
 
 [<TestFixture>]
 type ArrayMemoryStreamHardeningTests() =
@@ -326,7 +330,7 @@ type ArrayMemoryStreamHardeningTests() =
         // ACT
         let act () = MemoryStream.reset ms
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``MemoryStream.reset moves the position back to zero``() =
@@ -337,7 +341,6 @@ type ArrayMemoryStreamHardeningTests() =
         MemoryStream.reset ms
         // ASSERT
         equals ms.Position 0L
-
 
 [<TestFixture>]
 type ListHardeningTests() =
@@ -378,7 +381,6 @@ type ListHardeningTests() =
         // ASSERT
         isNone result
 
-
 [<TestFixture>]
 type ResizeArrayExistingHardeningTests() =
 
@@ -416,16 +418,17 @@ type ResizeArrayExistingHardeningTests() =
         // ACT
         let act () = ResizeArray.add 1 ra |> ignore
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``addRange on a null ResizeArray throws ArgumentNullException``() =
         // ARRANGE
         let ra: ResizeArray<int> = null
         // ACT
-        let act () = ResizeArray.addRange [ 1; 2 ] ra |> ignore
+        let act () =
+            ResizeArray.addRange [ 1; 2 ] ra |> ignore
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``addRange with a null items source adds nothing``() =
@@ -545,16 +548,17 @@ type ResizeArrayExistingHardeningTests() =
         // ACT
         let act () = ResizeArray.sort ra |> ignore
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``sortWith on a null ResizeArray throws ArgumentNullException``() =
         // ARRANGE
         let ra: ResizeArray<int> = null
         // ACT
-        let act () = ResizeArray.sortWith compare ra |> ignore
+        let act () =
+            ResizeArray.sortWith compare ra |> ignore
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``sortBy on a null ResizeArray throws ArgumentNullException``() =
@@ -563,16 +567,17 @@ type ResizeArrayExistingHardeningTests() =
         // ACT
         let act () = ResizeArray.sortBy id ra |> ignore
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``removeWhere on a null ResizeArray throws ArgumentNullException``() =
         // ARRANGE
         let ra: ResizeArray<int> = null
         // ACT
-        let act () = ResizeArray.removeWhere (fun x -> x > 0) ra |> ignore
+        let act () =
+            ResizeArray.removeWhere (fun x -> x > 0) ra |> ignore
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``clear on a null ResizeArray throws ArgumentNullException``() =
@@ -581,7 +586,7 @@ type ResizeArrayExistingHardeningTests() =
         // ACT
         let act () = ResizeArray.clear ra |> ignore
         // ASSERT
-        % Assert.Throws<ArgumentNullException>(act)
+        %Assert.Throws<ArgumentNullException>(act)
 
     [<Test>]
     member _.``fold on a null ResizeArray returns the initial state``() =
@@ -601,7 +606,6 @@ type ResizeArrayExistingHardeningTests() =
         // ASSERT
         equals result ""
 
-
 [<TestFixture>]
 type ResizeArrayNewFunctionsTests() =
 
@@ -610,7 +614,8 @@ type ResizeArrayNewFunctionsTests() =
         // ARRANGE
         let ra = ResizeArray<int>([ 1; 2; 3; 4; 5 ])
         // ACT
-        let result = ResizeArray.choose (fun x -> if x % 2 = 0 then Some(x * 10) else None) ra
+        let result =
+            ResizeArray.choose (fun x -> if x % 2 = 0 then Some(x * 10) else None) ra
         // ASSERT
         equals (result |> Seq.toList) [ 20; 40 ]
 
@@ -646,9 +651,11 @@ type ResizeArrayNewFunctionsTests() =
         // ARRANGE
         let ra = ResizeArray<int>([ 1; 2; 3 ])
         // ACT
-        let act () = ResizeArray.choose (fun x -> if x = 2 then failwith "boom" else Some x) ra |> ignore
+        let act () =
+            ResizeArray.choose (fun x -> if x = 2 then failwith "boom" else Some x) ra
+            |> ignore
         // ASSERT
-        % Assert.Throws<Exception>(act)
+        %Assert.Throws<Exception>(act)
 
     [<Test>]
     member _.``mapi maps each element together with its index``() =
@@ -759,9 +766,11 @@ type ResizeArrayNewFunctionsTests() =
         // ARRANGE
         let ra = ResizeArray<int>([ 1; 2; 3 ])
         // ACT
-        let act () = ResizeArray.partition (fun x -> if x = 2 then failwith "boom" else true) ra |> ignore
+        let act () =
+            ResizeArray.partition (fun x -> if x = 2 then failwith "boom" else true) ra
+            |> ignore
         // ASSERT
-        % Assert.Throws<Exception>(act)
+        %Assert.Throws<Exception>(act)
 
     [<Test>]
     member _.``tryFindIndex returns the index of the first match``() =
@@ -804,9 +813,11 @@ type ResizeArrayNewFunctionsTests() =
         // ARRANGE
         let ra = ResizeArray<int>([ 1; 2; 3 ])
         // ACT
-        let act () = ResizeArray.tryFindIndex (fun x -> if x = 2 then failwith "boom" else false) ra |> ignore
+        let act () =
+            ResizeArray.tryFindIndex (fun x -> if x = 2 then failwith "boom" else false) ra
+            |> ignore
         // ASSERT
-        % Assert.Throws<Exception>(act)
+        %Assert.Throws<Exception>(act)
 
     [<Test>]
     member _.``forall returns true when every element satisfies the predicate``() =
@@ -849,6 +860,8 @@ type ResizeArrayNewFunctionsTests() =
         // ARRANGE
         let ra = ResizeArray<int>([ 1; 2; 3 ])
         // ACT
-        let act () = ResizeArray.forall (fun x -> if x = 2 then failwith "boom" else true) ra |> ignore
+        let act () =
+            ResizeArray.forall (fun x -> if x = 2 then failwith "boom" else true) ra
+            |> ignore
         // ASSERT
-        % Assert.Throws<Exception>(act)
+        %Assert.Throws<Exception>(act)

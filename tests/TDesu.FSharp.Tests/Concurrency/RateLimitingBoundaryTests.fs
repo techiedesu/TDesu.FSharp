@@ -60,4 +60,4 @@ type RateLimitingBoundaryTests() =
         // ASSERT
         match result with
         | Error wait -> isTrue (wait > TimeSpan.Zero)
-        | Ok () -> Assert.Fail "expected the limiter to refuse"
+        | Ok() -> Assert.Fail "expected the limiter to refuse"

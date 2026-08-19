@@ -197,7 +197,8 @@ type StringMatchingTests() =
         // ARRANGE
         let values = [| "B" |]
         // ACT
-        let result = String.containsAny System.StringComparison.OrdinalIgnoreCase values "abc"
+        let result =
+            String.containsAny System.StringComparison.OrdinalIgnoreCase values "abc"
         // ASSERT
         isTrue result
 
@@ -262,7 +263,8 @@ type StringMatchingTests() =
         // ARRANGE
         let values = [| "BC" |]
         // ACT
-        let result = String.endsWithAny System.StringComparison.OrdinalIgnoreCase values "abc"
+        let result =
+            String.endsWithAny System.StringComparison.OrdinalIgnoreCase values "abc"
         // ASSERT
         isTrue result
 
@@ -646,9 +648,11 @@ type OptionConstructorTests() =
     [<Test>]
     member _.``Option ofPredicate propagates exception thrown by predicate``() =
         // ARRANGE
-        let throwing (_: int) : bool = raise (System.InvalidOperationException("boom"))
+        let throwing (_: int) : bool =
+            raise (System.InvalidOperationException("boom"))
         // ACT
-        let ex = Assert.Throws<System.InvalidOperationException>(fun () -> Option.ofPredicate throwing 5 |> ignore)
+        let ex =
+            Assert.Throws<System.InvalidOperationException>(fun () -> Option.ofPredicate throwing 5 |> ignore)
         // ASSERT
         equals ex.Message "boom"
 
@@ -657,7 +661,8 @@ type OptionConstructorTests() =
         // ARRANGE
         let nullPredicate: int -> bool = Unchecked.defaultof<_>
         // ACT
-        let ex = Assert.Throws<System.NullReferenceException>(fun () -> Option.ofPredicate nullPredicate 5 |> ignore)
+        let ex =
+            Assert.Throws<System.NullReferenceException>(fun () -> Option.ofPredicate nullPredicate 5 |> ignore)
         // ASSERT
         equals (ex.GetType()) typeof<System.NullReferenceException>
 
@@ -713,8 +718,10 @@ type OptionConstructorTests() =
     [<Test>]
     member _.``ValueOption ofPredicate propagates exception thrown by predicate``() =
         // ARRANGE
-        let throwing (_: int) : bool = raise (System.InvalidOperationException("boom"))
+        let throwing (_: int) : bool =
+            raise (System.InvalidOperationException("boom"))
         // ACT
-        let ex = Assert.Throws<System.InvalidOperationException>(fun () -> ValueOption.ofPredicate throwing 5 |> ignore)
+        let ex =
+            Assert.Throws<System.InvalidOperationException>(fun () -> ValueOption.ofPredicate throwing 5 |> ignore)
         // ASSERT
         equals ex.Message "boom"

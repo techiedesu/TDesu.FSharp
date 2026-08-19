@@ -27,7 +27,14 @@ type SeqTests() =
     [<Test>]
     member _.``toResizeArray preserves element order``() =
         // ARRANGE
-        let source = seq { 1; 2; 3; 4; 5 }
+        let source =
+            seq {
+                1
+                2
+                3
+                4
+                5
+            }
         // ACT
         let result = Seq.toResizeArray source
         // ASSERT
@@ -49,6 +56,7 @@ type SeqTests() =
     member _.``toResizeArray enumerates a non-ICollection source exactly once``() =
         // ARRANGE
         let mutable enumerations = 0
+
         let source =
             seq {
                 for x in [ 1; 2; 3 ] do

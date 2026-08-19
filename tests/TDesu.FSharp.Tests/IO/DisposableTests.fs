@@ -30,6 +30,7 @@ type DisposableTests() =
     [<Test>]
     member _.``DeferStack runs cleanups in LIFO order``() =
         let mutable order = []
+
         do
             use stack = Disposable.deferStack ()
             stack.Add(fun () -> order <- 1 :: order)

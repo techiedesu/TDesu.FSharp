@@ -32,13 +32,17 @@
         <Compile Include="Tasks\ParallelThrottleTests.fs" />
         <Compile Include="IO\DisposableTests.fs" />
         <Compile Include="IO\EnvTests.fs" />
+        <Compile Include="IO\FileSystemTests.fs" />
         <Compile Include="IO\ResourceSafetyTests.fs" />
+        <Compile Include="IO\TemporaryFileStreamTests.fs" />
         <Compile Include="Concurrency\ConcurrencyTests.fs" />
+        <Compile Include="Concurrency\PeriodicTimerCancellationTests.fs" />
         <Compile Include="Concurrency\CancellationTokenTests.fs" />
         <Compile Include="Concurrency\ChannelWorkerTests.fs" />
         <Compile Include="Concurrency\RateLimitingTests.fs" />
         <Compile Include="Concurrency\RateLimitingBoundaryTests.fs" />
         <Compile Include="Buffers\BuffersTests.fs" />
+        <Compile Include="Buffers\ArrayPoolTests.fs" />
         <Compile Include="Buffers\ValueStringBuilderTests.fs" />
         <Compile Include="ActivePatterns\ComparisonsTests.fs" />
         <Compile Include="Types\TypesTests.fs" />

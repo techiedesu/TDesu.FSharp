@@ -23,45 +23,51 @@ type SlidingWindowLimiter(maxRequests: int, window: TimeSpan, clock: IClock) =
     do
         if maxRequests <= 0 then
             invalidArg (nameof maxRequests) $"Must be positive, got %d{maxRequests}"
+
         if window.Ticks <= 0L then
             invalidArg (nameof window) $"Must be positive, got %A{window}"
 
     let windowTicks = window.Ticks
 
-    let lockObj = obj()
+    let lockObj = obj ()
     let mutable count = 0
     let mutable windowStart = 0L
 
     /// Creates a limiter using the system clock.
-    new(maxRequests: int, window: TimeSpan) =
-        SlidingWindowLimiter(maxRequests, window, SystemClock.Instance)
+    new(maxRequests: int, window: TimeSpan) = SlidingWindowLimiter(maxRequests, window, SystemClock.Instance)
 
     /// <summary>
     /// Try to acquire a permit. Thread-safe.
     /// Returns <c>Ok()</c> if allowed, <c>Error(waitTime)</c> if rate limited.
     /// </summary>
     member _.TryAcquire() : Result<unit, TimeSpan> =
-        lock lockObj (fun () ->
-            let nowTicks = clock.UtcNow.Ticks
-            if nowTicks - windowStart >= windowTicks then
-                count <- 1
-                windowStart <- nowTicks
-                Ok()
-            elif count < maxRequests then
-                count <- count + 1
-                Ok()
-            else
-                Error(TimeSpan(windowTicks - (nowTicks - windowStart))))
+        lock
+            lockObj
+            (fun () ->
+                let nowTicks = clock.UtcNow.Ticks
+
+                if nowTicks - windowStart >= windowTicks then
+                    count <- 1
+                    windowStart <- nowTicks
+                    Ok()
+                elif count < maxRequests then
+                    count <- count + 1
+                    Ok()
+                else
+                    Error(TimeSpan(windowTicks - (nowTicks - windowStart)))
+            )
 
     /// Reset the limiter to initial state. Thread-safe.
     member _.Reset() =
-        lock lockObj (fun () ->
-            count <- 0
-            windowStart <- 0L)
+        lock
+            lockObj
+            (fun () ->
+                count <- 0
+                windowStart <- 0L
+            )
 
     /// Current number of requests in the active window.
-    member _.Count =
-        lock lockObj (fun () -> count)
+    member _.Count = lock lockObj (fun () -> count)
 
     /// Maximum requests allowed per window.
     member _.MaxRequests = maxRequests

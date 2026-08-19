@@ -17,16 +17,13 @@ type private Permissions =
 type NumericTests() =
 
     [<Test>]
-    member _.``clamp returns the value when inside the range``() =
-        equals (Numeric.clamp 0 10 4) 4
+    member _.``clamp returns the value when inside the range``() = equals (Numeric.clamp 0 10 4) 4
 
     [<Test>]
-    member _.``clamp returns lo when the value is below the range``() =
-        equals (Numeric.clamp 0 10 -3) 0
+    member _.``clamp returns lo when the value is below the range``() = equals (Numeric.clamp 0 10 -3) 0
 
     [<Test>]
-    member _.``clamp returns hi when the value is above the range``() =
-        equals (Numeric.clamp 0 10 15) 10
+    member _.``clamp returns hi when the value is above the range``() = equals (Numeric.clamp 0 10 15) 10
 
     [<Test>]
     member _.``clamp with lo greater than hi always returns lo or hi``() =
@@ -35,16 +32,13 @@ type NumericTests() =
         equals (Numeric.clamp 10 1 100) 1
 
     [<Test>]
-    member _.``lerp at t=0 returns a``() =
-        equals (Numeric.lerp 0.0 10.0 0.0) 0.0
+    member _.``lerp at t=0 returns a``() = equals (Numeric.lerp 0.0 10.0 0.0) 0.0
 
     [<Test>]
-    member _.``lerp at t=1 returns b``() =
-        equals (Numeric.lerp 0.0 10.0 1.0) 10.0
+    member _.``lerp at t=1 returns b``() = equals (Numeric.lerp 0.0 10.0 1.0) 10.0
 
     [<Test>]
-    member _.``lerp at t=0.5 returns the midpoint``() =
-        equals (Numeric.lerp 0.0 10.0 0.5) 5.0
+    member _.``lerp at t=0.5 returns the midpoint``() = equals (Numeric.lerp 0.0 10.0 0.5) 5.0
 
     [<Test>]
     member _.``lerp outside the unit interval extrapolates instead of clamping``() =

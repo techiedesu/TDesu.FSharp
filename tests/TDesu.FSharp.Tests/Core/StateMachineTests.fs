@@ -5,13 +5,31 @@ open TDesu.FSharp
 
 // ── Test domain ──
 
-type DoorState = Locked | Closed | Open
-type DoorEvent = Lock | Unlock | OpenDoor | CloseDoor
-type DoorEffect = PlaySound of string | Log of string
+type DoorState =
+    | Locked
+    | Closed
+    | Open
 
-type TrafficLight = Red | Yellow | Green
-type TrafficEvent = Timer | Emergency
-type TrafficEffect = Alert of string
+type DoorEvent =
+    | Lock
+    | Unlock
+    | OpenDoor
+    | CloseDoor
+
+type DoorEffect =
+    | PlaySound of string
+    | Log of string
+
+type TrafficLight =
+    | Red
+    | Yellow
+    | Green
+
+type TrafficEvent =
+    | Timer
+    | Emergency
+
+type TrafficEffect = | Alert of string
 
 [<TestFixture>]
 type StateMachineTests() =
@@ -44,18 +62,13 @@ type StateMachineTests() =
                 allEffects <- allEffects @ r.Effects
             | Error msg -> Assert.Fail(msg)
 
-        step Unlock      // Locked -> Closed
-        step OpenDoor    // Closed -> Open
-        step CloseDoor   // Open -> Closed
-        step Lock        // Closed -> Locked
+        step Unlock // Locked -> Closed
+        step OpenDoor // Closed -> Open
+        step CloseDoor // Open -> Closed
+        step Lock // Closed -> Locked
 
         equals state Locked
-        equals allEffects [
-            PlaySound "click"
-            Log "door opened"
-            Log "door closed"
-            PlaySound "clack"
-        ]
+        equals allEffects [ PlaySound "click"; Log "door opened"; Log "door closed"; PlaySound "clack" ]
 
     [<Test>]
     member _.``invalid transition returns error``() =
@@ -108,8 +121,7 @@ type StateMachineTests() =
 
     [<Test>]
     member _.``fail returns error``() =
-        let apply _state _event =
-            StateMachine.fail "door is locked!"
+        let apply _state _event = StateMachine.fail "door is locked!"
 
         match apply Locked OpenDoor with
         | Error msg -> equals msg "door is locked!"

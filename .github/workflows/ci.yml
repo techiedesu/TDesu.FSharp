@@ -27,6 +27,14 @@ jobs:
       - name: Test
         run: dotnet test --no-build --verbosity normal
 
+      - name: Check formatting
+        run: |
+          dotnet tool restore
+          dotnet fsi manage.fsx format --check
+
+      - name: Check benchmarks compile
+        run: dotnet fsi manage.fsx benchcheck
+
       - name: Examples
         run: dotnet fsi manage.fsx examples
 

@@ -33,6 +33,7 @@ type EqualityComparerTests() =
             EqualityComparer.create
                 (fun (a: string) b -> a.ToLowerInvariant() = b.ToLowerInvariant())
                 (fun s -> s.ToLowerInvariant().GetHashCode())
+
         let dict = Dictionary<string, int>(comparer)
         dict["Hello"] <- 1
         // ACT
@@ -44,7 +45,9 @@ type EqualityComparerTests() =
     [<Test>]
     member _.``create on an empty dictionary reports every key as not found``() =
         // ARRANGE
-        let comparer = EqualityComparer.create (fun (a: string) b -> a = b) (fun s -> s.GetHashCode())
+        let comparer =
+            EqualityComparer.create (fun (a: string) b -> a = b) (fun s -> s.GetHashCode())
+
         let dict = Dictionary<string, int>(comparer)
         // ACT
         let found, _ = dict.TryGetValue "anything"
@@ -54,7 +57,9 @@ type EqualityComparerTests() =
     [<Test>]
     member _.``create reports an absent key as not found without disturbing present keys``() =
         // ARRANGE
-        let comparer = EqualityComparer.create (fun (a: string) b -> a = b) (fun s -> s.GetHashCode())
+        let comparer =
+            EqualityComparer.create (fun (a: string) b -> a = b) (fun s -> s.GetHashCode())
+
         let dict = Dictionary<string, int>(comparer)
         dict["a"] <- 1
         // ACT
@@ -66,11 +71,12 @@ type EqualityComparerTests() =
     [<Test>]
     member _.``create with a null equality function throws when the comparer is actually used``() =
         // ARRANGE
-        let comparer = EqualityComparer.create (Unchecked.defaultof<string -> string -> bool>) (fun s -> s.GetHashCode())
+        let comparer =
+            EqualityComparer.create (Unchecked.defaultof<string -> string -> bool>) (fun s -> s.GetHashCode())
         // ACT
         let act () = comparer.Equals("a", "b") |> ignore
         // ASSERT
-        % Assert.Throws<NullReferenceException>(act)
+        %Assert.Throws<NullReferenceException>(act)
 
     [<Test>]
     member _.``createBy treats elements as equal when their projected keys match``() =
@@ -113,7 +119,12 @@ type EqualityComparerTests() =
         let set = HashSet<Person>(comparer)
         // ACT
         let addedFirst = set.Add { Id = 1; Name = "Alice" }
-        let addedSecond = set.Add { Id = 1; Name = "Different name, same id" }
+
+        let addedSecond =
+            set.Add {
+                Id = 1
+                Name = "Different name, same id"
+            }
         // ASSERT
         isTrue addedFirst
         isFalse addedSecond
