@@ -24,14 +24,20 @@ module Saga =
     /// <param name="name">Descriptive name for the step (used in diagnostics).</param>
     /// <param name="execute">Async action that advances the saga context.</param>
     /// <param name="compensate">Async rollback action invoked on failure.</param>
-    let step name execute compensate =
-        { Name = name; Execute = execute; Compensate = compensate }
+    let step name execute compensate = {
+        Name = name
+        Execute = execute
+        Compensate = compensate
+    }
 
     /// Creates a saga step with no compensation (fire-and-forget).
     /// <param name="name">Descriptive name for the step (used in diagnostics).</param>
     /// <param name="execute">Async action that advances the saga context.</param>
-    let stepNoCompensate name execute =
-        { Name = name; Execute = execute; Compensate = fun _ -> task { return () } }
+    let stepNoCompensate name execute = {
+        Name = name
+        Execute = execute
+        Compensate = fun _ -> task { return () }
+    }
 
     /// Runs saga steps sequentially. On failure, compensates all completed steps in reverse.
     /// Each compensation receives the context that was the output of that step.
@@ -42,20 +48,27 @@ module Saga =
         task {
             let mutable completed: (Step<'ctx> * 'ctx) list = []
             let mutable current = ctx
+
             try
                 for s in steps do
                     let! next = s.Execute current
                     completed <- (s, next) :: completed
                     current <- next
+
                 return Ok current
             with ex ->
                 let mutable compensationErrors = []
+
                 for s, ctxAfterStep in completed do
-                    try do! s.Compensate ctxAfterStep
-                    with cex -> compensationErrors <- cex :: compensationErrors
-                let error : exn =
+                    try
+                        do! s.Compensate ctxAfterStep
+                    with cex ->
+                        compensationErrors <- cex :: compensationErrors
+
+                let error: exn =
                     match compensationErrors with
                     | [] -> ex
                     | _ -> AggregateException(ex :: List.rev compensationErrors)
+
                 return Error error
         }

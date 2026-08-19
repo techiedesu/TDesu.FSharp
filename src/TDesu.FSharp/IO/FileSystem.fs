@@ -17,7 +17,7 @@ module File =
     let delete filePath =
         try
             File.Delete(filePath)
-            Ok ()
+            Ok()
         with e ->
             Error e
 
@@ -26,19 +26,16 @@ module File =
 
     /// Returns true if the file does not exist at the given path.
     /// <param name="path">The file path to check.</param>
-    let inline notExists path =
-        File.Exists(path) |> not
+    let inline notExists path = File.Exists(path) |> not
 
 module Directory =
     /// Returns true if the directory does not exist at the given path.
     /// <param name="path">The directory path to check.</param>
-    let notExists path =
-        Directory.Exists(path) |> not
+    let notExists path = Directory.Exists(path) |> not
 
     /// Creates a directory (and parents) at the given path.
     /// <param name="path">The directory path to create.</param>
-    let create path =
-        %Directory.CreateDirectory(path)
+    let create path = %Directory.CreateDirectory(path)
 
 [<RequireQualifiedAccess>]
 module Path =
@@ -51,4 +48,4 @@ module Path =
 [<Sealed; AbstractClass>]
 type Path private () =
     /// Gets a new random file name (GUID-based, no dashes).
-    static member RandomFileName with get () = Path.getRandomFileName ()
+    static member RandomFileName = Path.getRandomFileName ()

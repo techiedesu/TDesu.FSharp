@@ -38,29 +38,42 @@ type TaskGroup private (cts: System.Threading.CancellationTokenSource) =
     /// </summary>
     /// <param name="f">Async function receiving the group's CancellationToken.</param>
     member _.Run(f: System.Threading.CancellationToken -> Task) =
-        let t = task {
-            try
-                do! f cts.Token
-            with
-            | :? OperationCanceledException -> ()
-            | ex ->
-                errors.Add(ex)
-                try cts.Cancel() with :? ObjectDisposedException -> ()
-        }
+        let t =
+            task {
+                try
+                    do! f cts.Token
+                with
+                | :? OperationCanceledException -> ()
+                | ex ->
+                    errors.Add(ex)
+
+                    try
+                        cts.Cancel()
+                    with :? ObjectDisposedException ->
+                        ()
+            }
+
         tasks.Add(t)
 
     /// <summary>
     /// Wait for all tasks to complete. Throws <see cref="AggregateException"/> if any failed.
     /// </summary>
-    member _.WaitAll() : Task = task {
-        try
-            do! Task.WhenAll(tasks)
-        with _ -> ()
-        if not errors.IsEmpty then
-            raise (AggregateException(errors.ToArray()))
-    }
+    member _.WaitAll() : Task =
+        task {
+            try
+                do! Task.WhenAll(tasks)
+            with _ ->
+                ()
+
+            if not errors.IsEmpty then
+                raise (AggregateException(errors.ToArray()))
+        }
 
     interface IDisposable with
         member _.Dispose() =
-            try cts.Cancel() with :? ObjectDisposedException -> ()
+            try
+                cts.Cancel()
+            with :? ObjectDisposedException ->
+                ()
+
             cts.Dispose()

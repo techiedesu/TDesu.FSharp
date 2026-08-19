@@ -14,11 +14,12 @@ module Stream =
     /// <summary>
     /// The outcome of <see cref="copyUpTo"/> when the source produced more bytes than the configured limit.
     /// </summary>
-    type MaxBytesExceeded =
-        { /// The configured maximum number of bytes <see cref="copyUpTo"/> was allowed to read.
-          MaxBytes: int64
-          /// The number of bytes actually written to the destination before the limit was hit.
-          BytesWritten: int64 }
+    type MaxBytesExceeded = {
+        /// The configured maximum number of bytes <see cref="copyUpTo"/> was allowed to read.
+        MaxBytes: int64
+        /// The number of bytes actually written to the destination before the limit was hit.
+        BytesWritten: int64
+    }
 
     /// <summary>
     /// Copies <paramref name="source"/> into <paramref name="destination"/>, stopping and returning
@@ -56,17 +57,29 @@ module Stream =
     /// <param name="destination">The stream to write to. Not disposed by this function.</param>
     /// <param name="cancellationToken">Token observed on every read and write.</param>
     /// <param name="source">The stream to read from. Not disposed by this function.</param>
-    let copyUpTo (maxBytes: int64) (destination: Stream) (cancellationToken: CancellationToken) (source: Stream) : Task<Result<int64, MaxBytesExceeded>> =
-        if isNull source then nullArg (nameof source)
-        if isNull destination then nullArg (nameof destination)
+    let copyUpTo
+        (maxBytes: int64)
+        (destination: Stream)
+        (cancellationToken: CancellationToken)
+        (source: Stream)
+        : Task<Result<int64, MaxBytesExceeded>> =
+        if isNull source then
+            nullArg (nameof source)
+
+        if isNull destination then
+            nullArg (nameof destination)
+
         task {
             let buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(81920)
+
             try
                 let mutable written = 0L
                 let mutable exceeded = false
                 let mutable reading = true
+
                 while reading do
                     let! bytesRead = source.ReadAsync(Memory(buffer), cancellationToken)
+
                     if bytesRead = 0 then
                         reading <- false
                     elif written + int64 bytesRead > maxBytes then
@@ -75,7 +88,15 @@ module Stream =
                     else
                         do! destination.WriteAsync(ReadOnlyMemory(buffer, 0, bytesRead), cancellationToken)
                         written <- written + int64 bytesRead
-                return if exceeded then Error { MaxBytes = maxBytes; BytesWritten = written } else Ok written
+
+                return
+                    if exceeded then
+                        Error {
+                            MaxBytes = maxBytes
+                            BytesWritten = written
+                        }
+                    else
+                        Ok written
             finally
                 System.Buffers.ArrayPool<byte>.Shared.Return(buffer)
         }

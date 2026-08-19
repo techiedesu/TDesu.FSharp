@@ -27,8 +27,10 @@ module Bytes =
     let xor (a: byte[]) (b: byte[]) =
         let len = min a.Length b.Length
         let result = Array.zeroCreate len
+
         for i = 0 to len - 1 do
             result[i] <- a[i] ^^^ b[i]
+
         result
 
     /// XORs b into a in-place (mutates a).
@@ -48,8 +50,13 @@ module Bytes =
         let al = a.Length
         let bl = b.Length
         let result: byte[] = Array.zeroCreate (al + bl)
-        if al > 0 then Buffer.BlockCopy(a, 0, result, 0, al)
-        if bl > 0 then Buffer.BlockCopy(b, 0, result, al, bl)
+
+        if al > 0 then
+            Buffer.BlockCopy(a, 0, result, 0, al)
+
+        if bl > 0 then
+            Buffer.BlockCopy(b, 0, result, al, bl)
+
         result
 
     /// Concatenates three byte arrays without intermediate allocations.
@@ -72,9 +79,12 @@ module Bytes =
         let total = a.Length + b.Length + c.Length + d.Length
         let result = Array.zeroCreate total
         let mutable off = 0
-        Buffer.BlockCopy(a, 0, result, off, a.Length); off <- off + a.Length
-        Buffer.BlockCopy(b, 0, result, off, b.Length); off <- off + b.Length
-        Buffer.BlockCopy(c, 0, result, off, c.Length); off <- off + c.Length
+        Buffer.BlockCopy(a, 0, result, off, a.Length)
+        off <- off + a.Length
+        Buffer.BlockCopy(b, 0, result, off, b.Length)
+        off <- off + b.Length
+        Buffer.BlockCopy(c, 0, result, off, c.Length)
+        off <- off + c.Length
         Buffer.BlockCopy(d, 0, result, off, d.Length)
         result
 
@@ -101,8 +111,7 @@ module Bytes =
     /// <param name="offset">The starting offset in the array.</param>
     /// <param name="length">The number of bytes to fill.</param>
     /// <param name="arr">The target byte array.</param>
-    let inline fill (value: byte) (offset: int) (length: int) (arr: byte[]) =
-        Array.Fill(arr, value, offset, length)
+    let inline fill (value: byte) (offset: int) (length: int) (arr: byte[]) = Array.Fill(arr, value, offset, length)
 
     /// Returns true if two byte array regions are equal.
     /// <param name="a">The first byte array.</param>
@@ -113,9 +122,13 @@ module Bytes =
     let regionEquals (a: byte[]) (aOff: int) (b: byte[]) (bOff: int) (len: int) =
         let mutable i = 0
         let mutable equal = true
+
         while equal && i < len do
-            if a[aOff + i] <> b[bOff + i] then equal <- false
+            if a[aOff + i] <> b[bOff + i] then
+                equal <- false
+
             i <- i + 1
+
         equal
 
     /// Constant-time byte array comparison (timing-safe for crypto).
@@ -124,11 +137,14 @@ module Bytes =
     /// <param name="a">The first byte array.</param>
     /// <param name="b">The second byte array.</param>
     let constantTimeEquals (a: byte[]) (b: byte[]) =
-        if a.Length <> b.Length then false
+        if a.Length <> b.Length then
+            false
         else
             let mutable diff = 0
+
             for i = 0 to a.Length - 1 do
                 diff <- diff ||| int (a[i] ^^^ b[i])
+
             diff = 0
 
 [<RequireQualifiedAccess>]
@@ -139,6 +155,7 @@ module ArrayPool =
     /// <param name="f">The function to apply to the rented buffer.</param>
     let inline useBytes (minLength: int) ([<InlineIfLambda>] f: byte[] -> 'R) : 'R =
         let arr = ArrayPool<byte>.Shared.Rent(minLength)
+
         try
             f arr
         finally
@@ -149,6 +166,7 @@ module ArrayPool =
     /// <param name="f">The function to apply to the rented buffer.</param>
     let inline usePooled<'T, 'R> (minLength: int) ([<InlineIfLambda>] f: 'T[] -> 'R) : 'R =
         let arr = ArrayPool<'T>.Shared.Rent(minLength)
+
         try
             f arr
         finally
@@ -156,13 +174,11 @@ module ArrayPool =
 
     /// Rents a byte buffer from the shared pool.
     /// <param name="minLength">The minimum length of the rented buffer.</param>
-    let inline rentBytes (minLength: int) =
-        ArrayPool<byte>.Shared.Rent(minLength)
+    let inline rentBytes (minLength: int) = ArrayPool<byte>.Shared.Rent(minLength)
 
     /// Returns a byte buffer to the shared pool.
     /// <param name="arr">The byte array to return to the pool.</param>
-    let inline returnBytes (arr: byte[]) =
-        ArrayPool<byte>.Shared.Return(arr)
+    let inline returnBytes (arr: byte[]) = ArrayPool<byte>.Shared.Return(arr)
 
     /// Rents a buffer, copies data into it, applies f, then returns the buffer.
     /// <param name="data">The source byte array to copy from.</param>
@@ -172,6 +188,7 @@ module ArrayPool =
     let inline withCopy (data: byte[]) (offset: int) (length: int) ([<InlineIfLambda>] f: byte[] -> 'R) : 'R =
         let arr = ArrayPool<byte>.Shared.Rent(length)
         Buffer.BlockCopy(data, offset, arr, 0, length)
+
         try
             f arr
         finally

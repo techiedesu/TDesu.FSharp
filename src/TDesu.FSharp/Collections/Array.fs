@@ -29,10 +29,15 @@ module Array =
         else
             let mutable result = ValueNone
             let mutable i = 0
+
             while result.IsNone && i < array.Length do
                 let current = array[i]
-                if filter current then result <- ValueSome current
+
+                if filter current then
+                    result <- ValueSome current
+
                 i <- i + 1
+
             result
 
     /// <summary>
@@ -48,10 +53,15 @@ module Array =
         else
             let mutable result = ValueNone
             let mutable i = array.Length - 1
+
             while result.IsNone && i >= 0 do
                 let current = array[i]
-                if filter current then result <- ValueSome current
+
+                if filter current then
+                    result <- ValueSome current
+
                 i <- i - 1
+
             result
 
     /// <summary>
@@ -67,9 +77,11 @@ module Array =
         else
             let mutable result = ValueNone
             let mutable i = 0
+
             while result.IsNone && i < array.Length do
                 result <- chooser array[i]
                 i <- i + 1
+
             result
 
     /// <summary>
@@ -85,7 +97,9 @@ module Array =
         else
             let mutable result = ValueNone
             let mutable i = array.Length - 1
+
             while result.IsNone && i >= 0 do
                 result <- chooser array[i]
                 i <- i - 1
+
             result

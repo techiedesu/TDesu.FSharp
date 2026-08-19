@@ -27,18 +27,27 @@ module ResizeArray =
     /// Creates a ResizeArray from a sequence. A null <paramref name="source"/> is treated as empty.
     /// <param name="source">The input sequence.</param>
     let inline ofSeq (source: 'T seq) =
-        if isNull source then ResizeArray<'T>() else ResizeArray<'T>(source)
+        if isNull source then
+            ResizeArray<'T>()
+        else
+            ResizeArray<'T>(source)
 
     /// Creates a ResizeArray from a list. A null <paramref name="source"/> is treated as empty (F# lists
     /// represent <c>[]</c> this way when handed a raw null reference from a non-F# caller).
     /// <param name="source">The input list.</param>
     let inline ofList (source: 'T list) =
-        if isNotNullRef source then ResizeArray<'T>(source :> _ seq) else ResizeArray<'T>()
+        if isNotNullRef source then
+            ResizeArray<'T>(source :> _ seq)
+        else
+            ResizeArray<'T>()
 
     /// Creates a ResizeArray from an array. A null <paramref name="source"/> is treated as empty.
     /// <param name="source">The input array.</param>
     let inline ofArray (source: 'T[]) =
-        if isNull source then ResizeArray<'T>() else ResizeArray<'T>(source)
+        if isNull source then
+            ResizeArray<'T>()
+        else
+            ResizeArray<'T>(source)
 
     /// Adds an item and returns the ResizeArray (pipeable).
     /// <paramref name="ra"/> is the mutation target: unlike the read-only helpers in this module, a null
@@ -59,7 +68,10 @@ module ResizeArray =
     /// <param name="ra">The ResizeArray to add to.</param>
     let inline addRange (items: 'T seq) (ra: ResizeArray<'T>) =
         Guard.notNull "ra" ra
-        if not (isNull items) then ra.AddRange(items)
+
+        if not (isNull items) then
+            ra.AddRange(items)
+
         ra
 
     /// Maps each element, returning a new ResizeArray. A null <paramref name="ra"/> is treated as empty
@@ -71,8 +83,10 @@ module ResizeArray =
             ResizeArray<'TResult>()
         else
             let result = ResizeArray<'TResult>(ra.Count)
+
             for item in ra do
                 result.Add(f item)
+
             result
 
     /// Maps each element together with its index, returning a new ResizeArray. A null <paramref name="ra"/>
@@ -84,8 +98,10 @@ module ResizeArray =
             ResizeArray<'TResult>()
         else
             let result = ResizeArray<'TResult>(ra.Count)
+
             for i = 0 to ra.Count - 1 do
                 result.Add(f i ra[i])
+
             result
 
     /// Filters elements, returning a new ResizeArray. A null <paramref name="ra"/> is treated as empty
@@ -94,9 +110,12 @@ module ResizeArray =
     /// <param name="ra">The input ResizeArray.</param>
     let inline filter ([<InlineIfLambda>] f: 'T -> bool) (ra: ResizeArray<'T>) =
         let result = ResizeArray<'T>()
+
         if not (isNull ra) then
             for item in ra do
-                if f item then result.Add(item)
+                if f item then
+                    result.Add(item)
+
         result
 
     /// Applies a function to each element, keeping the results that are <c>Some</c>. Returns a new
@@ -105,11 +124,13 @@ module ResizeArray =
     /// <param name="ra">The input ResizeArray.</param>
     let inline choose ([<InlineIfLambda>] f: 'T -> 'TResult option) (ra: ResizeArray<'T>) =
         let result = ResizeArray<'TResult>()
+
         if not (isNull ra) then
             for item in ra do
                 match f item with
                 | Some v -> result.Add(v)
                 | None -> ()
+
         result
 
     /// Splits into two new ResizeArrays: elements satisfying the predicate, then the rest. A null
@@ -119,9 +140,11 @@ module ResizeArray =
     let inline partition ([<InlineIfLambda>] f: 'T -> bool) (ra: ResizeArray<'T>) =
         let matching = ResizeArray<'T>()
         let rest = ResizeArray<'T>()
+
         if not (isNull ra) then
             for item in ra do
                 if f item then matching.Add(item) else rest.Add(item)
+
         matching, rest
 
     /// Applies an action to each element. A null <paramref name="ra"/> is treated as empty (no-op).
@@ -129,7 +152,8 @@ module ResizeArray =
     /// <param name="ra">The input ResizeArray.</param>
     let inline iter ([<InlineIfLambda>] f: 'T -> unit) (ra: ResizeArray<'T>) =
         if not (isNull ra) then
-            for item in ra do f item
+            for item in ra do
+                f item
 
     /// Applies an action with index to each element. A null <paramref name="ra"/> is treated as empty
     /// (no-op).
@@ -137,7 +161,8 @@ module ResizeArray =
     /// <param name="ra">The input ResizeArray.</param>
     let inline iteri ([<InlineIfLambda>] f: int -> 'T -> unit) (ra: ResizeArray<'T>) =
         if not (isNull ra) then
-            for i = 0 to ra.Count - 1 do f i ra[i]
+            for i = 0 to ra.Count - 1 do
+                f i ra[i]
 
     /// Returns true if any element satisfies the predicate. False for an empty or null ResizeArray.
     /// <param name="f">The predicate to test each element.</param>
@@ -148,9 +173,13 @@ module ResizeArray =
         else
             let mutable found = false
             let mutable i = 0
+
             while not found && i < ra.Count do
-                if f ra[i] then found <- true
+                if f ra[i] then
+                    found <- true
+
                 i <- i + 1
+
             found
 
     /// Returns true if all elements satisfy the predicate. Vacuously true for an empty or null
@@ -163,9 +192,13 @@ module ResizeArray =
         else
             let mutable allTrue = true
             let mutable i = 0
+
             while allTrue && i < ra.Count do
-                if not (f ra[i]) then allTrue <- false
+                if not (f ra[i]) then
+                    allTrue <- false
+
                 i <- i + 1
+
             allTrue
 
     /// Returns the first element matching the predicate, or None. A null <paramref name="ra"/> is
@@ -178,9 +211,13 @@ module ResizeArray =
         else
             let mutable result = None
             let mutable i = 0
+
             while result.IsNone && i < ra.Count do
-                if f ra[i] then result <- Some ra[i]
+                if f ra[i] then
+                    result <- Some ra[i]
+
                 i <- i + 1
+
             result
 
     /// Returns the index of the first element matching the predicate, or None. A null
@@ -193,9 +230,13 @@ module ResizeArray =
         else
             let mutable result = None
             let mutable i = 0
+
             while result.IsNone && i < ra.Count do
-                if f ra[i] then result <- Some i
+                if f ra[i] then
+                    result <- Some i
+
                 i <- i + 1
+
             result
 
     /// Safe index access. A null <paramref name="ra"/>, or an out-of-range <paramref name="index"/>,
@@ -213,7 +254,8 @@ module ResizeArray =
 
     /// Converts to an array. A null <paramref name="ra"/> is treated as empty and yields <c>[||]</c>.
     /// <param name="ra">The ResizeArray to convert.</param>
-    let inline toArray (ra: ResizeArray<'T>) = if isNull ra then [||] else ra.ToArray()
+    let inline toArray (ra: ResizeArray<'T>) =
+        if isNull ra then [||] else ra.ToArray()
 
     /// Returns a new ResizeArray with elements in reverse order. A null <paramref name="ra"/> is treated
     /// as empty and yields an empty result.
@@ -223,8 +265,10 @@ module ResizeArray =
             ResizeArray<'T>()
         else
             let result = ResizeArray<'T>(ra.Count)
+
             for i = ra.Count - 1 downto 0 do
                 result.Add(ra[i])
+
             result
 
     /// Returns the number of elements. A null <paramref name="ra"/> is treated as empty (0).
@@ -298,8 +342,10 @@ module ResizeArray =
             state
         else
             let mutable acc = state
+
             for item in ra do
                 acc <- f acc item
+
             acc
 
     /// Joins elements as strings with a separator. A null <paramref name="ra"/> is treated as empty and

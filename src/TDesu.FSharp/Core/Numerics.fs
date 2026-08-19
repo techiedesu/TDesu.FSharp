@@ -53,8 +53,7 @@ module Numeric =
     /// <param name="a">Value at <c>t = 0</c>.</param>
     /// <param name="b">Value at <c>t = 1</c>.</param>
     /// <param name="t">Interpolation fraction.</param>
-    let inline lerp (a: 'a) (b: 'a) (t: 'a) : 'a =
-        a + (b - a) * t
+    let inline lerp (a: 'a) (b: 'a) (t: 'a) : 'a = a + (b - a) * t
 
     /// <summary>
     /// Inverse of <see cref="lerp"/>: finds the fraction <c>t</c> at which <paramref name="value"/> occurs
@@ -75,8 +74,7 @@ module Numeric =
     /// <param name="a">Value at <c>t = 0</c>.</param>
     /// <param name="b">Value at <c>t = 1</c>.</param>
     /// <param name="value">Value to locate between <paramref name="a"/> and <paramref name="b"/>.</param>
-    let inline inverseLerp (a: 'a) (b: 'a) (value: 'a) : 'a =
-        (value - a) / (b - a)
+    let inline inverseLerp (a: 'a) (b: 'a) (value: 'a) : 'a = (value - a) / (b - a)
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="value"/> lies within [<paramref name="lo"/>, <paramref name="hi"/>], inclusive on both ends.
@@ -94,8 +92,7 @@ module Numeric =
     /// <param name="lo">Inclusive lower bound.</param>
     /// <param name="hi">Inclusive upper bound.</param>
     /// <param name="value">Value to test.</param>
-    let inline isBetween (lo: 'a) (hi: 'a) (value: 'a) : bool =
-        value >= lo && value <= hi
+    let inline isBetween (lo: 'a) (hi: 'a) (value: 'a) : bool = value >= lo && value <= hi
 
     /// <summary>
     /// The additive identity for numeric type <c>'a</c>, via <see cref="Microsoft.FSharp.Core.LanguagePrimitives.GenericZero"/>.
@@ -128,11 +125,12 @@ module Numeric =
 /// this abbreviation exists purely so <see cref="Enum"/>'s functions don't each repeat the same three-line
 /// constraint clause.
 /// </summary>
-type EnumShape<'enum when 'enum: struct
-                      and 'enum :> Enum
-                      and 'enum: (static member (|||): 'enum -> 'enum -> 'enum)
-                      and 'enum: (static member (^^^): 'enum -> 'enum -> 'enum)
-                      and 'enum: (static member (&&&): 'enum -> 'enum -> 'enum)> = 'enum
+type EnumShape<'enum
+    when 'enum: struct
+    and 'enum :> Enum
+    and 'enum: (static member (|||): 'enum -> 'enum -> 'enum)
+    and 'enum: (static member (^^^): 'enum -> 'enum -> 'enum)
+    and 'enum: (static member (&&&): 'enum -> 'enum -> 'enum)> = 'enum
 
 /// Bitwise flag helpers for <c>[&lt;Flags&gt;]</c> enums, generic over any enum type via <see cref="EnumShape{T}"/>.
 [<RequireQualifiedAccess>]

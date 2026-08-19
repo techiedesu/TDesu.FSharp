@@ -33,18 +33,15 @@ module Validation =
 
     /// Create a valid value.
     /// <param name="value">The value to wrap.</param>
-    let inline ok (value: 'TValue) : Validation<'TValue, 'TError> =
-        Validation.Ok value
+    let inline ok (value: 'TValue) : Validation<'TValue, 'TError> = Validation.Ok value
 
     /// Create a single-error validation.
     /// <param name="err">The error to wrap.</param>
-    let inline error (err: 'TError) : Validation<'TValue, 'TError> =
-        Validation.Error [ err ]
+    let inline error (err: 'TError) : Validation<'TValue, 'TError> = Validation.Error [ err ]
 
     /// Create a multi-error validation.
     /// <param name="errs">The list of errors.</param>
-    let inline errors (errs: 'TError list) : Validation<'TValue, 'TError> =
-        Validation.Error errs
+    let inline errors (errs: 'TError list) : Validation<'TValue, 'TError> = Validation.Error errs
 
     /// Map over the value, leaving errors unchanged.
     /// <param name="f">The mapping function.</param>
@@ -65,7 +62,10 @@ module Validation =
     /// Bind (monadic, short-circuits on first Error — use <c>and!</c> for applicative).
     /// <param name="f">The binding function.</param>
     /// <param name="v">The validation to bind.</param>
-    let bind (f: 'TValue -> Validation<'TResult, 'TError>) (v: Validation<'TValue, 'TError>) : Validation<'TResult, 'TError> =
+    let bind
+        (f: 'TValue -> Validation<'TResult, 'TError>)
+        (v: Validation<'TValue, 'TError>)
+        : Validation<'TResult, 'TError> =
         match v with
         | Validation.Ok x -> f x
         | Validation.Error errs -> Validation.Error errs
@@ -73,11 +73,15 @@ module Validation =
     /// Applicative apply — combines errors from both sides.
     /// <param name="fV">A validation containing a function.</param>
     /// <param name="xV">A validation containing a value.</param>
-    let apply (fV: Validation<'TValue -> 'TResult, 'TError>) (xV: Validation<'TValue, 'TError>) : Validation<'TResult, 'TError> =
+    let apply
+        (fV: Validation<'TValue -> 'TResult, 'TError>)
+        (xV: Validation<'TValue, 'TError>)
+        : Validation<'TResult, 'TError> =
         match fV, xV with
         | Validation.Ok f, Validation.Ok x -> Validation.Ok(f x)
         | Validation.Error e1, Validation.Error e2 -> Validation.Error(e1 @ e2)
-        | Validation.Error e, _ | _, Validation.Error e -> Validation.Error e
+        | Validation.Error e, _
+        | _, Validation.Error e -> Validation.Error e
 
     /// Convert a Result to a Validation.
     /// <param name="r">The Result to convert.</param>
@@ -96,12 +100,16 @@ module Validation =
     /// Returns true if the validation is Ok.
     /// <param name="v">The validation to check.</param>
     let inline isOk (v: Validation<'TValue, 'TError>) =
-        match v with Validation.Ok _ -> true | _ -> false
+        match v with
+        | Validation.Ok _ -> true
+        | _ -> false
 
     /// Returns true if the validation is Error.
     /// <param name="v">The validation to check.</param>
     let inline isError (v: Validation<'TValue, 'TError>) =
-        match v with Validation.Error _ -> true | _ -> false
+        match v with
+        | Validation.Error _ -> true
+        | _ -> false
 
     /// Extract the value, throwing if Error.
     /// <param name="v">The validation to unwrap.</param>
@@ -124,28 +132,34 @@ module Validation =
 /// </summary>
 [<Sealed>]
 type ValidationBuilder() =
-    member inline _.Return(value: 'TValue) : Validation<'TValue, 'TError> =
-        Validation.Ok value
+    member inline _.Return(value: 'TValue) : Validation<'TValue, 'TError> = Validation.Ok value
 
     member inline _.ReturnFrom(v: Validation<'TValue, 'TError>) : Validation<'TValue, 'TError> = v
 
-    member inline _.Bind(v: Validation<'TValue, 'TError>, f: 'TValue -> Validation<'TResult, 'TError>) : Validation<'TResult, 'TError> =
+    member inline _.Bind
+        (v: Validation<'TValue, 'TError>, f: 'TValue -> Validation<'TResult, 'TError>)
+        : Validation<'TResult, 'TError> =
         Validation.bind f v
 
-    member inline _.BindReturn(v: Validation<'TValue, 'TError>, [<InlineIfLambda>] f: 'TValue -> 'TResult) : Validation<'TResult, 'TError> =
+    member inline _.BindReturn
+        (v: Validation<'TValue, 'TError>, [<InlineIfLambda>] f: 'TValue -> 'TResult)
+        : Validation<'TResult, 'TError> =
         Validation.map f v
 
-    member inline _.MergeSources(v1: Validation<'T1, 'TError>, v2: Validation<'T2, 'TError>) : Validation<'T1 * 'T2, 'TError> =
+    member inline _.MergeSources
+        (v1: Validation<'T1, 'TError>, v2: Validation<'T2, 'TError>)
+        : Validation<'T1 * 'T2, 'TError> =
         match v1, v2 with
         | Validation.Ok a, Validation.Ok b -> Validation.Ok(a, b)
         | Validation.Error e1, Validation.Error e2 -> Validation.Error(e1 @ e2)
-        | Validation.Error e, _ | _, Validation.Error e -> Validation.Error e
+        | Validation.Error e, _
+        | _, Validation.Error e -> Validation.Error e
 
     member inline _.Zero() : Validation<unit, 'TError> = Validation.Ok()
 
     member inline _.Delay([<InlineIfLambda>] f: unit -> Validation<'TValue, 'TError>) = f
 
-    member inline _.Run([<InlineIfLambda>] f: unit -> Validation<'TValue, 'TError>) = f()
+    member inline _.Run([<InlineIfLambda>] f: unit -> Validation<'TValue, 'TError>) = f ()
 
 /// Computation expression instance for Validation workflows: <c>validation { ... }</c>.
 [<AutoOpen>]

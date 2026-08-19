@@ -74,9 +74,11 @@ type ValueStringBuilder =
     /// </summary>
     /// <param name="initialBuffer">The buffer to write into before growing into the pool.</param>
     new(initialBuffer: Span<char>) =
-        { _chars = initialBuffer
-          _pos = 0
-          _arrayToReturnToPool = null }
+        {
+            _chars = initialBuffer
+            _pos = 0
+            _arrayToReturnToPool = null
+        }
 
     /// <summary>
     /// Creates a builder backed entirely by a pooled array of at least
@@ -87,9 +89,12 @@ type ValueStringBuilder =
     /// <param name="initialCapacity">The minimum initial capacity to rent.</param>
     new(initialCapacity: int) =
         let rented = ArrayPool<char>.Shared.Rent(initialCapacity)
-        { _chars = Span<char>(rented)
-          _pos = 0
-          _arrayToReturnToPool = rented }
+
+        {
+            _chars = Span<char>(rented)
+            _pos = 0
+            _arrayToReturnToPool = rented
+        }
 
     /// The number of characters written so far.
     member this.Length = this._pos
@@ -98,6 +103,7 @@ type ValueStringBuilder =
     /// <param name="c">The character to append.</param>
     member this.Append(c: char) =
         let pos = this._pos
+
         if uint32 pos < uint32 this._chars.Length then
             this._chars[pos] <- c
             this._pos <- pos + 1
@@ -111,8 +117,10 @@ type ValueStringBuilder =
     member this.Append(value: ReadOnlySpan<char>) =
         if value.Length > 0 then
             let required = this._pos + value.Length
+
             if required > this._chars.Length then
                 this.Grow(value.Length)
+
             value.CopyTo(this._chars.Slice(this._pos))
             this._pos <- required
 
@@ -131,14 +139,13 @@ type ValueStringBuilder =
     /// instance — and, if it already grew, the same rented array — can be reused to build
     /// another string.
     /// </summary>
-    member this.Clear() =
-        this._pos <- 0
+    member this.Clear() = this._pos <- 0
 
     /// The characters written so far, as a read-only view over the live buffer (no copy).
     /// Only valid until the next <see cref="Append"/>, <see cref="Clear"/>, or <see cref="Dispose"/> call.
     member this.AsSpan() : ReadOnlySpan<char> =
         let written = this._chars.Slice(0, this._pos)
-        Span<char>.op_Implicit(written)
+        Span<char>.op_Implicit (written)
 
     /// <summary>
     /// Attempts to copy the characters written so far into <paramref name="destination"/>,
@@ -147,8 +154,11 @@ type ValueStringBuilder =
     /// <param name="destination">The buffer to copy into.</param>
     /// <param name="charsWritten">Receives the number of characters copied, or 0 if the copy failed.</param>
     /// <returns><c>true</c> if <paramref name="destination"/> was large enough; otherwise <c>false</c>.</returns>
-    member this.TryCopyTo(destination: Span<char>, [<System.Runtime.InteropServices.Out>] charsWritten: int byref) : bool =
+    member this.TryCopyTo
+        (destination: Span<char>, [<System.Runtime.InteropServices.Out>] charsWritten: int byref)
+        : bool =
         let written = this._chars.Slice(0, this._pos)
+
         if written.TryCopyTo(destination) then
             charsWritten <- this._pos
             true
@@ -178,6 +188,7 @@ type ValueStringBuilder =
         this._chars <- Span<char>.Empty
         this._pos <- 0
         this._arrayToReturnToPool <- null
+
         if not (isNull toReturn) then
             ArrayPool<char>.Shared.Return(toReturn)
 
@@ -188,11 +199,14 @@ type ValueStringBuilder =
     /// the same array twice.
     /// <param name="additionalCapacityBeyondPos">The minimum extra capacity required beyond the current write position.</param>
     member private this.Grow(additionalCapacityBeyondPos: int) =
-        let newCapacity = max (this._pos + additionalCapacityBeyondPos) (this._chars.Length * 2)
+        let newCapacity =
+            max (this._pos + additionalCapacityBeyondPos) (this._chars.Length * 2)
+
         let newArray = ArrayPool<char>.Shared.Rent(newCapacity)
         this._chars.Slice(0, this._pos).CopyTo(Span<char>(newArray))
         let toReturn = this._arrayToReturnToPool
         this._chars <- Span<char>(newArray)
         this._arrayToReturnToPool <- newArray
+
         if not (isNull toReturn) then
             ArrayPool<char>.Shared.Return(toReturn)

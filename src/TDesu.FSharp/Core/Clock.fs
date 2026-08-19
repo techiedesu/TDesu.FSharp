@@ -43,13 +43,11 @@ type FakeClock(startTime: DateTimeOffset) =
 
     /// Advance the clock by the given duration.
     /// <param name="duration">The amount of time to advance.</param>
-    member _.Advance(duration: TimeSpan) =
-        now <- now + duration
+    member _.Advance(duration: TimeSpan) = now <- now + duration
 
     /// Set the clock to a specific time.
     /// <param name="time">The time to set.</param>
-    member _.Set(time: DateTimeOffset) =
-        now <- time
+    member _.Set(time: DateTimeOffset) = now <- time
 
     /// Current fake time.
     member _.Current = now

@@ -22,6 +22,7 @@ module UnixTime =
         member _.Ticks = ticks
 
     let private sw = Stopwatch.StartNew()
+
     let mutable private cal =
         let now = DateTimeOffset.UtcNow
         CalData(now.ToUnixTimeSeconds(), now.ToUnixTimeMilliseconds(), sw.ElapsedTicks)
@@ -30,8 +31,7 @@ module UnixTime =
     /// Thread-safe: the CalData reference is swapped atomically.
     let recalibrate () =
         let now = DateTimeOffset.UtcNow
-        Threading.Volatile.Write(&cal,
-            CalData(now.ToUnixTimeSeconds(), now.ToUnixTimeMilliseconds(), sw.ElapsedTicks))
+        Threading.Volatile.Write(&cal, CalData(now.ToUnixTimeSeconds(), now.ToUnixTimeMilliseconds(), sw.ElapsedTicks))
 
     /// <summary>
     /// Current Unix timestamp in seconds (fast, cached).
@@ -41,7 +41,10 @@ module UnixTime =
         let c = Threading.Volatile.Read(&cal)
         let elapsed = (sw.ElapsedTicks - c.Ticks) / Stopwatch.Frequency
         let result = c.Seconds + elapsed
-        if elapsed > 60L then recalibrate ()
+
+        if elapsed > 60L then
+            recalibrate ()
+
         result
 
     /// <summary>
@@ -52,7 +55,10 @@ module UnixTime =
         let c = Threading.Volatile.Read(&cal)
         let elapsedMs = (sw.ElapsedTicks - c.Ticks) * 1000L / Stopwatch.Frequency
         let result = c.Ms + elapsedMs
-        if elapsedMs > 60000L then recalibrate ()
+
+        if elapsedMs > 60000L then
+            recalibrate ()
+
         result
 
     /// Current Unix timestamp in seconds as int32 (for protocols that use 32-bit timestamps).

@@ -37,13 +37,16 @@ module String =
     /// <param name="substr">The substring to count.</param>
     /// <param name="str">The string to search in.</param>
     let countOccurrences (substr: string) (str: string) =
-        if isNull str || isNull substr || str.Length = 0 || substr.Length = 0 then 0
+        if isNull str || isNull substr || str.Length = 0 || substr.Length = 0 then
+            0
         else
             let mutable count = 0
             let mutable idx = str.IndexOf(substr, System.StringComparison.Ordinal)
+
             while idx >= 0 do
                 count <- count + 1
                 idx <- str.IndexOf(substr, idx + substr.Length, System.StringComparison.Ordinal)
+
             count
 
     /// <summary>
@@ -63,8 +66,10 @@ module String =
     /// <param name="values">The prefixes to test against.</param>
     /// <param name="str">The string to check.</param>
     let startsWithAny (values: string[]) (str: string) =
-        if isNull str || isNull values then false
-        else values |> Array.exists (fun v -> isNotNullRef v && str.StartsWith(v))
+        if isNull str || isNull values then
+            false
+        else
+            values |> Array.exists (fun v -> isNotNullRef v && str.StartsWith(v))
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="str"/> is equal to any of the <paramref name="values"/>, using the
@@ -81,8 +86,10 @@ module String =
     /// <param name="values">The candidates to test against.</param>
     /// <param name="str">The string to check.</param>
     let equalsAny (comparison: System.StringComparison) (values: string[]) (str: string) =
-        if isNull str || isNull values then false
-        else values |> Array.exists (fun v -> System.String.Equals(str, v, comparison))
+        if isNull str || isNull values then
+            false
+        else
+            values |> Array.exists (fun v -> System.String.Equals(str, v, comparison))
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="str"/> contains any of the <paramref name="values"/>, using the
@@ -92,8 +99,10 @@ module String =
     /// <param name="values">The substrings to search for.</param>
     /// <param name="str">The string to search in.</param>
     let containsAny (comparison: System.StringComparison) (values: string[]) (str: string) =
-        if isNull str || isNull values then false
-        else values |> Array.exists (fun v -> isNotNullRef v && str.Contains(v, comparison))
+        if isNull str || isNull values then
+            false
+        else
+            values |> Array.exists (fun v -> isNotNullRef v && str.Contains(v, comparison))
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="str"/> ends with any of the <paramref name="values"/>, using the
@@ -103,8 +112,10 @@ module String =
     /// <param name="values">The suffixes to test against.</param>
     /// <param name="str">The string to check.</param>
     let endsWithAny (comparison: System.StringComparison) (values: string[]) (str: string) =
-        if isNull str || isNull values then false
-        else values |> Array.exists (fun v -> isNotNullRef v && str.EndsWith(v, comparison))
+        if isNull str || isNull values then
+            false
+        else
+            values |> Array.exists (fun v -> isNotNullRef v && str.EndsWith(v, comparison))
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="str"/>, taken as a single character, equals any of the
@@ -119,8 +130,10 @@ module String =
     /// <param name="values">The characters to test against.</param>
     /// <param name="str">The string to check.</param>
     let equalsAnyChar (values: char[]) (str: string) =
-        if isNull str || isNull values || str.Length <> 1 then false
-        else values |> Array.exists (fun c -> c = str[0])
+        if isNull str || isNull values || str.Length <> 1 then
+            false
+        else
+            values |> Array.exists (fun c -> c = str[0])
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="str"/> contains any of the <paramref name="values"/> characters,
@@ -129,8 +142,10 @@ module String =
     /// <param name="values">The characters to search for.</param>
     /// <param name="str">The string to search in.</param>
     let containsAnyChar (values: char[]) (str: string) =
-        if isNull str || isNull values then false
-        else values |> Array.exists (fun c -> str.IndexOf(c) >= 0)
+        if isNull str || isNull values then
+            false
+        else
+            values |> Array.exists (fun c -> str.IndexOf(c) >= 0)
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="str"/> ends with any of the <paramref name="values"/> characters.
@@ -139,8 +154,10 @@ module String =
     /// <param name="values">The characters to test against.</param>
     /// <param name="str">The string to check.</param>
     let endsWithAnyChar (values: char[]) (str: string) =
-        if isNull str || isNull values || str.Length = 0 then false
-        else values |> Array.exists (fun c -> str[str.Length - 1] = c)
+        if isNull str || isNull values || str.Length = 0 then
+            false
+        else
+            values |> Array.exists (fun c -> str[str.Length - 1] = c)
 
     /// <summary>
     /// Replaces all line-ending sequences with the given replacement text.
@@ -152,41 +169,37 @@ module String =
     /// <param name="replacementText">The text to substitute for line endings.</param>
     /// <param name="str">The input string.</param>
     let replaceEndLines (replacementText: string) (str: string) =
-        if isNull str then str
-        else str.Replace("\r\n", replacementText).Replace("\r", replacementText).Replace("\n", replacementText)
+        if isNull str then
+            str
+        else
+            str.Replace("\r\n", replacementText).Replace("\r", replacementText).Replace("\n", replacementText)
 
     /// Converts a string to uppercase using invariant culture.
     /// <param name="str">The string to convert.</param>
-    let toUpperInv (str: string) =
-        str.ToUpperInvariant()
+    let toUpperInv (str: string) = str.ToUpperInvariant()
 
     /// Converts a string to uppercase using the current culture.
     /// <param name="str">The string to convert.</param>
-    let toUpper (str: string) =
-        str.ToUpper()
+    let toUpper (str: string) = str.ToUpper()
 
     /// Converts a string to lowercase using invariant culture.
     /// <param name="str">The string to convert.</param>
-    let toLowerInv (str: string) =
-        str.ToLowerInvariant()
+    let toLowerInv (str: string) = str.ToLowerInvariant()
 
     /// Converts a string to lowercase using the current culture.
     /// <param name="str">The string to convert.</param>
-    let toLower (str: string) =
-        str.ToLower()
+    let toLower (str: string) = str.ToLower()
 
     /// Returns the substring starting at the given index.
     /// <param name="idx">The zero-based start index.</param>
     /// <param name="str">The input string.</param>
-    let inline substring (idx: int) (str: string) =
-        str.Substring(idx)
+    let inline substring (idx: int) (str: string) = str.Substring(idx)
 
     /// Returns the substring starting at idx with the given length.
     /// <param name="idx">The zero-based start index.</param>
     /// <param name="length">The number of characters to extract.</param>
     /// <param name="str">The input string.</param>
-    let inline substringLen (idx: int) (length: int) (str: string) =
-        str.Substring(idx, length)
+    let inline substringLen (idx: int) (length: int) (str: string) = str.Substring(idx, length)
 
     /// <summary>
     /// Returns <c>true</c> if str contains value (ordinal).
@@ -226,27 +239,23 @@ module String =
     /// Splits a string by the given separator.
     /// <param name="separator">The delimiter string.</param>
     /// <param name="str">The string to split.</param>
-    let inline split (separator: string) (str: string) =
-        str.Split(separator)
+    let inline split (separator: string) (str: string) = str.Split(separator)
 
     /// Splits a string by the given char separator.
     /// <param name="separator">The delimiter character.</param>
     /// <param name="str">The string to split.</param>
-    let inline splitChar (separator: char) (str: string) =
-        str.Split(separator)
+    let inline splitChar (separator: char) (str: string) = str.Split(separator)
 
     /// Replaces all occurrences of oldValue with newValue.
     /// <param name="oldValue">The substring to find.</param>
     /// <param name="newValue">The replacement string.</param>
     /// <param name="str">The input string.</param>
-    let inline replace (oldValue: string) (newValue: string) (str: string) =
-        str.Replace(oldValue, newValue)
+    let inline replace (oldValue: string) (newValue: string) (str: string) = str.Replace(oldValue, newValue)
 
     /// Removes all occurrences of value from the string.
     /// <param name="value">The substring to remove.</param>
     /// <param name="str">The input string.</param>
-    let inline remove (value: string) (str: string) =
-        str.Replace(value, "")
+    let inline remove (value: string) (str: string) = str.Replace(value, "")
 
     /// <summary>
     /// Returns at most <paramref name="maxLen"/> characters from the start of the string.
@@ -260,8 +269,10 @@ module String =
     /// <param name="maxLen">Maximum length of the returned string.</param>
     /// <param name="str">The string to truncate.</param>
     let truncate (maxLen: int) (str: string) =
-        if isNull str || str.Length <= maxLen then str
-        else str.Substring(0, maxLen)
+        if isNull str || str.Length <= maxLen then
+            str
+        else
+            str.Substring(0, maxLen)
 
     /// <summary>
     /// Joins a sequence of strings with the given separator.
@@ -271,30 +282,33 @@ module String =
     /// <param name="separator">The delimiter placed between elements.</param>
     /// <param name="values">The strings to join.</param>
     let inline join (separator: string) (values: string seq) =
-        if isNull values then "" else System.String.Join(separator, values)
+        if isNull values then
+            ""
+        else
+            System.String.Join(separator, values)
 
     /// <summary>
     /// Returns <c>None</c> if the string is null/empty/whitespace, otherwise <c>Some(s)</c>.
     /// </summary>
     /// <param name="s">The string to evaluate.</param>
     let inline toOption (s: string) =
-        if System.String.IsNullOrWhiteSpace(s) then None
-        else Some s
+        if System.String.IsNullOrWhiteSpace(s) then None else Some s
 
     /// Returns the default value if the string is null or empty.
     /// <param name="defaultValue">The fallback value.</param>
     /// <param name="str">The string to test.</param>
     let inline defaultIfEmpty (defaultValue: string) (str: string) =
-        if System.String.IsNullOrEmpty(str) then defaultValue else str
+        if System.String.IsNullOrEmpty(str) then
+            defaultValue
+        else
+            str
 
     /// Pads the string on the left to the given total width.
     /// <param name="totalWidth">The desired total length after padding.</param>
     /// <param name="str">The string to pad.</param>
-    let inline padLeft (totalWidth: int) (str: string) =
-        str.PadLeft(totalWidth)
+    let inline padLeft (totalWidth: int) (str: string) = str.PadLeft(totalWidth)
 
     /// Pads the string on the right to the given total width.
     /// <param name="totalWidth">The desired total length after padding.</param>
     /// <param name="str">The string to pad.</param>
-    let inline padRight (totalWidth: int) (str: string) =
-        str.PadRight(totalWidth)
+    let inline padRight (totalWidth: int) (str: string) = str.PadRight(totalWidth)

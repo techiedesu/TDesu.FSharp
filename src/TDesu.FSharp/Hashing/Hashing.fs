@@ -33,7 +33,10 @@ module Hash =
     /// <param name="xs">The sequence of elements to hash.</param>
     let ofSeq (xs: 'a seq) =
         let mutable hc = HashCode()
-        for x in xs do hc.Add(x)
+
+        for x in xs do
+            hc.Add(x)
+
         hc.ToHashCode()
 
     /// Hashes all elements of an array.
@@ -48,12 +51,15 @@ module Hash =
 [<RequireQualifiedAccess>]
 module ContentHash =
     let private hexChars = "0123456789abcdef"
+
     let private toHex (bytes: byte[]) =
         let chars = Array.zeroCreate (bytes.Length * 2)
+
         for i = 0 to bytes.Length - 1 do
             let b = int bytes[i]
             chars[i * 2] <- hexChars[b >>> 4]
             chars[i * 2 + 1] <- hexChars[b &&& 0xF]
+
         String(chars)
 
     /// SHA256 hash of byte array.
@@ -64,18 +70,15 @@ module ContentHash =
 
     /// SHA256 hash of a string (UTF-8).
     /// <param name="s">The string to hash.</param>
-    let sha256String (s: string) : byte[] =
-        sha256 (Encoding.UTF8.GetBytes s)
+    let sha256String (s: string) : byte[] = sha256 (Encoding.UTF8.GetBytes s)
 
     /// SHA256 hash as lowercase hex string.
     /// <param name="s">The string to hash.</param>
-    let sha256Hex (s: string) : string =
-        sha256String s |> toHex
+    let sha256Hex (s: string) : string = sha256String s |> toHex
 
     /// SHA256 hash of bytes as lowercase hex string.
     /// <param name="data">The byte array to hash.</param>
-    let sha256HexBytes (data: byte[]) : string =
-        sha256 data |> toHex
+    let sha256HexBytes (data: byte[]) : string = sha256 data |> toHex
 
     /// SHA1 hash of byte array.
     /// <param name="data">The byte array to hash.</param>
@@ -85,8 +88,7 @@ module ContentHash =
 
     /// SHA1 hash as lowercase hex string.
     /// <param name="data">The byte array to hash.</param>
-    let sha1Hex (data: byte[]) : string =
-        sha1 data |> toHex
+    let sha1Hex (data: byte[]) : string = sha1 data |> toHex
 
     /// MD5 hash of a string (UTF-8) as lowercase hex string.
     /// <param name="s">The string to hash.</param>
@@ -103,8 +105,7 @@ module ContentHash =
     /// Generic: hash bytes to lowercase hex using any HashAlgorithm.
     /// <param name="alg">The hash algorithm instance to use.</param>
     /// <param name="data">The byte array to hash.</param>
-    let hashHex (alg: HashAlgorithm) (data: byte[]) : string =
-        alg.ComputeHash(data) |> toHex
+    let hashHex (alg: HashAlgorithm) (data: byte[]) : string = alg.ComputeHash(data) |> toHex
 
 /// IEqualityComparer implementations for using collections as dictionary keys.
 [<RequireQualifiedAccess>]
@@ -122,38 +123,36 @@ module CollectionComparer =
                 else
                     let mutable i = 0
                     let mutable eq = true
+
                     while eq && i < a.Length do
                         if a[i] <> b[i] then
                             eq <- false
+
                         i <- i + 1
+
                     eq
 
-            member _.GetHashCode(arr) =
-                Hash.ofArray arr
+            member _.GetHashCode(arr) = Hash.ofArray arr
         }
 
     /// Equality comparer for generic arrays (structural).
     let forArray<'a when 'a: equality> () =
         { new IEqualityComparer<'a[]> with
             member _.Equals(a, b) =
-                if obj.ReferenceEquals(a, b) then
-                    true
-                elif isNull a || isNull b then
-                    false
-                elif a.Length <> b.Length then
-                    false
-                else
-                    Array.forall2 (=) a b
+                if obj.ReferenceEquals(a, b) then true
+                elif isNull a || isNull b then false
+                elif a.Length <> b.Length then false
+                else Array.forall2 (=) a b
 
-            member _.GetHashCode(arr) =
-                Hash.ofArray arr
+            member _.GetHashCode(arr) = Hash.ofArray arr
         }
 
     /// Equality comparer for lists (structural — F# lists already have structural equality but not IEqualityComparer).
     let forList<'a when 'a: equality> () =
         { new IEqualityComparer<'a list> with
             member _.Equals(a, b) = a = b
-            member _.GetHashCode(lst) = Hash.ofList lst }
+            member _.GetHashCode(lst) = Hash.ofList lst
+        }
 
 /// <summary>
 /// Factory for ad hoc <see cref="System.Collections.Generic.IEqualityComparer{T}"/> instances — for
@@ -181,7 +180,8 @@ module EqualityComparer =
     let create (equals: 'a -> 'a -> bool) (getHashCode: 'a -> int) : IEqualityComparer<'a> =
         { new IEqualityComparer<'a> with
             member _.Equals(x, y) = equals x y
-            member _.GetHashCode(obj) = getHashCode obj }
+            member _.GetHashCode(obj) = getHashCode obj
+        }
 
     /// <summary>
     /// Creates an <see cref="System.Collections.Generic.IEqualityComparer{T}"/> that compares and
@@ -197,4 +197,5 @@ module EqualityComparer =
     let createBy<'a, 'b when 'b: equality> (projection: 'a -> 'b) : IEqualityComparer<'a> =
         { new IEqualityComparer<'a> with
             member _.Equals(x, y) = projection x = projection y
-            member _.GetHashCode(obj) = hash (projection obj) }
+            member _.GetHashCode(obj) = hash (projection obj)
+        }

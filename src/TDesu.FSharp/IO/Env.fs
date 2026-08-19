@@ -17,7 +17,8 @@ module Env =
     /// <param name="name">The environment variable name.</param>
     let getVar (name: string) : string option =
         match Environment.GetEnvironmentVariable(name) with
-        | null | "" -> None
+        | null
+        | "" -> None
         | v -> Some v
 
     /// Gets an environment variable, throwing if missing/empty.

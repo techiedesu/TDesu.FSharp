@@ -125,14 +125,20 @@ module Operators =
     /// </example>
     /// <param name="str">The snake_case string to convert.</param>
     let snakeCaseToCamelCase (str: string) =
-        if str.Length = 0 then str
+        if str.Length = 0 then
+            str
         else
             let sb = System.Text.StringBuilder(str.Length)
             let mutable prev = '_'
+
             for c in str do
                 let c = if prev = '_' then Char.ToUpper c else c
-                if c <> '_' then sb.Append(c) |> ignore
+
+                if c <> '_' then
+                    sb.Append(c) |> ignore
+
                 prev <- c
+
             sb.ToString()
 
     /// <summary>
@@ -145,16 +151,20 @@ module Operators =
     /// </example>
     /// <param name="str">The CamelCase string to convert.</param>
     let camelCaseToSnakeCase (str: string) =
-        if str.Length = 0 then str
+        if str.Length = 0 then
+            str
         else
             let sb = System.Text.StringBuilder(str.Length + 4)
             sb.Append(Char.ToLower str[0]) |> ignore
+
             for i = 1 to str.Length - 1 do
                 let c = str[i]
+
                 if Char.IsUpper c then
                     sb.Append('_').Append(Char.ToLower c) |> ignore
                 else
                     sb.Append(c) |> ignore
+
             sb.ToString()
 
     /// <summary>
@@ -252,8 +262,7 @@ module Operators =
     /// </summary>
     /// <exception cref="System.AggregateException">Always thrown.</exception>
     /// <param name="errors">Inner exceptions to aggregate.</param>
-    let inline aggregate (errors: exn seq) : 'a =
-        raise ^ AggregateException(errors)
+    let inline aggregate (errors: exn seq) : 'a = raise ^ AggregateException(errors)
 
     /// <summary>
     /// Throws <see cref="System.ObjectDisposedException"/>.

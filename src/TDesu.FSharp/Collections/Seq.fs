@@ -16,11 +16,14 @@ module Seq =
             None
         else
             use e = source.GetEnumerator()
+
             if e.MoveNext() then
                 let mutable best = e.Current
+
                 while e.MoveNext() do
                     if e.Current > best then
                         best <- e.Current
+
                 Some best
             else
                 None
@@ -34,11 +37,14 @@ module Seq =
             None
         else
             use e = source.GetEnumerator()
+
             if e.MoveNext() then
                 let mutable best = e.Current
+
                 while e.MoveNext() do
                     if e.Current < best then
                         best <- e.Current
+
                 Some best
             else
                 None
@@ -55,14 +61,18 @@ module Seq =
             None
         else
             use e = source.GetEnumerator()
+
             if e.MoveNext() then
                 let mutable bestItem = e.Current
                 let mutable bestKey = projection bestItem
+
                 while e.MoveNext() do
                     let key = projection e.Current
+
                     if key > bestKey then
                         bestItem <- e.Current
                         bestKey <- key
+
                 Some bestItem
             else
                 None
@@ -79,16 +89,20 @@ module Seq =
             None
         else
             use e = source.GetEnumerator()
+
             if not (e.MoveNext()) then
                 None
             else
                 let mutable bestItem = e.Current
                 let mutable bestKey = projection bestItem
+
                 while e.MoveNext() do
                     let key = projection e.Current
+
                     if key < bestKey then
                         bestItem <- e.Current
                         bestKey <- key
+
                 Some bestItem
 
     /// Returns Some(average) or None for empty or null sequences of floats.
@@ -98,12 +112,15 @@ module Seq =
             None
         else
             use e = source.GetEnumerator()
+
             if e.MoveNext() then
                 let mutable sum = e.Current
                 let mutable count = 1
+
                 while e.MoveNext() do
                     sum <- sum + e.Current
                     count <- count + 1
+
                 Some(sum / float count)
             else
                 None
@@ -117,4 +134,7 @@ module Seq =
     /// </summary>
     /// <param name="source">The sequence to convert.</param>
     let toResizeArray (source: 'T seq) : ResizeArray<'T> =
-        if isNull source then ResizeArray<'T>() else ResizeArray<'T>(source)
+        if isNull source then
+            ResizeArray<'T>()
+        else
+            ResizeArray<'T>(source)

@@ -10,19 +10,23 @@ module TaskResult =
     /// Maps the Ok value inside a Task&lt;Result&gt;.
     /// <param name="f">The mapping function applied to the Ok value.</param>
     /// <param name="tr">The input task containing a Result.</param>
-    let inline map ([<InlineIfLambda>] f: 'T -> 'TResult) (tr: Task<Result<'T, 'TError>>) : Task<Result<'TResult, 'TError>> =
+    let inline map
+        ([<InlineIfLambda>] f: 'T -> 'TResult)
+        (tr: Task<Result<'T, 'TError>>)
+        : Task<Result<'TResult, 'TError>> =
         task {
             match! tr with
-            | Ok v ->
-                return Ok(f v)
-            | Error e ->
-                return Error e
+            | Ok v -> return Ok(f v)
+            | Error e -> return Error e
         }
 
     /// Maps the Error value inside a Task&lt;Result&gt;.
     /// <param name="f">The mapping function applied to the Error value.</param>
     /// <param name="tr">The input task containing a Result.</param>
-    let inline mapError ([<InlineIfLambda>] f: 'TError -> 'TError2) (tr: Task<Result<'T, 'TError>>) : Task<Result<'T, 'TError2>> =
+    let inline mapError
+        ([<InlineIfLambda>] f: 'TError -> 'TError2)
+        (tr: Task<Result<'T, 'TError>>)
+        : Task<Result<'T, 'TError2>> =
         task {
             match! tr with
             | Ok v -> return Ok v
@@ -35,7 +39,10 @@ module TaskResult =
     /// </summary>
     /// <param name="f">The binding function applied to the Ok value.</param>
     /// <param name="tr">The input task containing a Result.</param>
-    let inline bind ([<InlineIfLambda>] f: 'T -> Task<Result<'TResult, 'TError>>) (tr: Task<Result<'T, 'TError>>) : Task<Result<'TResult, 'TError>> =
+    let inline bind
+        ([<InlineIfLambda>] f: 'T -> Task<Result<'TResult, 'TError>>)
+        (tr: Task<Result<'T, 'TError>>)
+        : Task<Result<'TResult, 'TError>> =
         task {
             match! tr with
             | Ok v -> return! f v
@@ -68,21 +75,28 @@ module TaskResult =
     let inline tee ([<InlineIfLambda>] f: 'T -> unit) (tr: Task<Result<'T, 'TError>>) : Task<Result<'T, 'TError>> =
         task {
             let! r = tr
+
             match r with
             | Ok v -> f v
             | Error _ -> ()
+
             return r
         }
 
     /// Applies a side-effect on Error inside a Task&lt;Result&gt; and returns unchanged.
     /// <param name="f">Side-effect function applied to the Error value.</param>
     /// <param name="tr">The input task containing a Result.</param>
-    let inline teeError ([<InlineIfLambda>] f: 'TError -> unit) (tr: Task<Result<'T, 'TError>>) : Task<Result<'T, 'TError>> =
+    let inline teeError
+        ([<InlineIfLambda>] f: 'TError -> unit)
+        (tr: Task<Result<'T, 'TError>>)
+        : Task<Result<'T, 'TError>> =
         task {
             let! r = tr
+
             match r with
             | Ok _ -> ()
             | Error e -> f e
+
             return r
         }
 

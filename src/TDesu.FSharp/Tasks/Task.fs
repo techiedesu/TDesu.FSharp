@@ -16,8 +16,7 @@ open TDesu.FSharp.Operators
 module Task =
     /// Converts a non-generic Task to Task&lt;unit&gt;.
     /// <param name="t">The non-generic task to convert.</param>
-    let inline asUnit (t: Task) : Task<unit> =
-        task { do! t }
+    let inline asUnit (t: Task) : Task<unit> = task { do! t }
 
     /// <summary>
     /// Fire-and-forget: starts a task without awaiting. Logs exceptions via <paramref name="onError"/>.
@@ -27,9 +26,15 @@ module Task =
     /// <param name="f">Factory that produces the task to run.</param>
     let inline fireAndForget (onError: exn -> unit) (f: unit -> Task) =
         task {
-            try do! f ()
-            with ex -> try onError ex with _ -> ()
-        } |> ignore
+            try
+                do! f ()
+            with ex ->
+                try
+                    onError ex
+                with _ ->
+                    ()
+        }
+        |> ignore
 
     /// <summary>
     /// Runs tasks in parallel with a throttle (max concurrent). Returns all results.
@@ -47,17 +52,26 @@ module Task =
     /// <param name="f">Async function applied to each item.</param>
     let parallelThrottle (maxConcurrent: int) (items: 'T seq) (f: 'T -> Task<'TResult>) : Task<'TResult[]> =
         let items = if isNotNullRef items then items else Seq.empty
+
         task {
             let semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
+
             try
                 let tasks = ResizeArray<Task<'TResult>>()
+
                 try
                     for item in items do
                         do! semaphore.WaitAsync()
-                        tasks.Add(task {
-                            try return! f item
-                            finally semaphore.Release() |> ignore
-                        })
+
+                        tasks.Add(
+                            task {
+                                try
+                                    return! f item
+                                finally
+                                    semaphore.Release() |> ignore
+                            }
+                        )
+
                     return! Task.WhenAll(tasks)
                 with ex ->
                     // Drain every already-spawned task so its `finally semaphore.Release()` still
@@ -65,7 +79,9 @@ module Task =
                     if tasks.Count > 0 then
                         try
                             do! Task.WhenAll(tasks) :> Task
-                        with _ -> ()
+                        with _ ->
+                            ()
+
                     return raise ex
             finally
                 semaphore.Dispose()
@@ -84,27 +100,39 @@ module Task =
     /// <param name="f">Async function applied to each item.</param>
     let parallelThrottleUnit (maxConcurrent: int) (items: 'T seq) (f: 'T -> Task<unit>) : Task<unit> =
         let items = if isNotNullRef items then items else Seq.empty
+
         task {
             let semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
+
             try
                 let tasks = ResizeArray<Task<unit>>()
+
                 try
                     for item in items do
                         do! semaphore.WaitAsync()
-                        tasks.Add(task {
-                            try do! f item
-                            finally semaphore.Release() |> ignore
-                        })
+
+                        tasks.Add(
+                            task {
+                                try
+                                    do! f item
+                                finally
+                                    semaphore.Release() |> ignore
+                            }
+                        )
+
                     let! _ = Task.WhenAll(tasks)
                     ()
                 with ex ->
                     if tasks.Count > 0 then
                         try
                             do! Task.WhenAll(tasks) :> Task
-                        with _ -> ()
+                        with _ ->
+                            ()
+
                     return raise ex
             finally
                 semaphore.Dispose()
+
             return ()
         }
 
@@ -205,8 +233,10 @@ module Task =
         task {
             let sw = System.Diagnostics.Stopwatch.StartNew()
             let mutable met = condition ()
+
             while not met && sw.Elapsed < timeout do
                 do! Task.Delay 10
                 met <- condition ()
+
             return met
         }

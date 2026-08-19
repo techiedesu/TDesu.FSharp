@@ -27,16 +27,20 @@ module Dictionary =
     /// <param name="key">The key to look up.</param>
     /// <param name="d">The dictionary to search.</param>
     let inline tryGetValue key (d: #IDictionary<'TKey, 'TValue>) =
-        if isNull d then None
-        else d.TryGetValue key |> Option.ofCSharpTryPattern
+        if isNull d then
+            None
+        else
+            d.TryGetValue key |> Option.ofCSharpTryPattern
 
     /// Tries to get a value, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. A null
     /// <paramref name="d"/> is treated as an empty dictionary and also returns <c>ValueNone</c>.
     /// <param name="key">The key to look up.</param>
     /// <param name="d">The dictionary to search.</param>
     let inline tryGetValueV key (d: #IDictionary<'TKey, 'TValue>) =
-        if isNull d then ValueNone
-        else d.TryGetValue key |> ValueOption.ofCSharpTryPattern
+        if isNull d then
+            ValueNone
+        else
+            d.TryGetValue key |> ValueOption.ofCSharpTryPattern
 
     /// Get value or default — replaces <c>match d.TryGetValue(k) with true, v -> v | _ -> def</c>.
     /// A null <paramref name="d"/> is treated as an empty dictionary and also returns

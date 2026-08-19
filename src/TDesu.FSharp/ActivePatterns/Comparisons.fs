@@ -32,8 +32,7 @@ module Comparisons =
     /// </example>
     /// <param name="comparand">The value to compare against.</param>
     /// <param name="value">The value being matched.</param>
-    let inline (|Eq|_|) (comparand: 'a) (value: 'a) =
-        value = comparand
+    let inline (|Eq|_|) (comparand: 'a) (value: 'a) = value = comparand
 
     /// <summary>
     /// Matches when the matched value is not structurally equal to <paramref name="comparand"/>.
@@ -47,8 +46,7 @@ module Comparisons =
     /// </example>
     /// <param name="comparand">The value to compare against.</param>
     /// <param name="value">The value being matched.</param>
-    let inline (|NEq|_|) (comparand: 'a) (value: 'a) =
-        value <> comparand
+    let inline (|NEq|_|) (comparand: 'a) (value: 'a) = value <> comparand
 
     /// <summary>
     /// Matches when the matched value is strictly greater than <paramref name="comparand"/>.
@@ -62,8 +60,7 @@ module Comparisons =
     /// </example>
     /// <param name="comparand">The value to compare against.</param>
     /// <param name="value">The value being matched.</param>
-    let inline (|Gt|_|) (comparand: 'a) (value: 'a) =
-        value > comparand
+    let inline (|Gt|_|) (comparand: 'a) (value: 'a) = value > comparand
 
     /// <summary>
     /// Matches when the matched value is strictly less than <paramref name="comparand"/>.
@@ -77,8 +74,7 @@ module Comparisons =
     /// </example>
     /// <param name="comparand">The value to compare against.</param>
     /// <param name="value">The value being matched.</param>
-    let inline (|Lt|_|) (comparand: 'a) (value: 'a) =
-        value < comparand
+    let inline (|Lt|_|) (comparand: 'a) (value: 'a) = value < comparand
 
     /// <summary>
     /// Matches when the matched value is less than or equal to <paramref name="comparand"/>.
@@ -92,8 +88,7 @@ module Comparisons =
     /// </example>
     /// <param name="comparand">The value to compare against.</param>
     /// <param name="value">The value being matched.</param>
-    let inline (|LtEq|_|) (comparand: 'a) (value: 'a) =
-        value <= comparand
+    let inline (|LtEq|_|) (comparand: 'a) (value: 'a) = value <= comparand
 
     /// <summary>
     /// Matches when the matched value is greater than or equal to <paramref name="comparand"/>.
@@ -107,8 +102,7 @@ module Comparisons =
     /// </example>
     /// <param name="comparand">The value to compare against.</param>
     /// <param name="value">The value being matched.</param>
-    let inline (|GtEq|_|) (comparand: 'a) (value: 'a) =
-        value >= comparand
+    let inline (|GtEq|_|) (comparand: 'a) (value: 'a) = value >= comparand
 
     /// <summary>
     /// Matches when the matched value lies within [<paramref name="lo"/>, <paramref name="hi"/>], inclusive on both ends.
@@ -127,5 +121,4 @@ module Comparisons =
     /// <param name="lo">Inclusive lower bound.</param>
     /// <param name="hi">Inclusive upper bound.</param>
     /// <param name="value">The value being matched.</param>
-    let inline (|Between|_|) (lo: 'a) (hi: 'a) (value: 'a) =
-        value >= lo && value <= hi
+    let inline (|Between|_|) (lo: 'a) (hi: 'a) (value: 'a) = value >= lo && value <= hi

@@ -20,6 +20,7 @@ module Timeout =
     let after (duration: TimeSpan) (work: CancellationToken -> Task<'T>) : Task<'T> =
         task {
             use cts = new CancellationTokenSource(duration)
+
             try
                 return! work cts.Token
             with :? OperationCanceledException when cts.IsCancellationRequested ->
@@ -30,10 +31,15 @@ module Timeout =
     /// <param name="duration">Maximum time allowed before the operation is cancelled.</param>
     /// <param name="parentCt">Parent token that can also trigger cancellation.</param>
     /// <param name="work">Async work that receives a cancellation token linked to both the deadline and the parent token.</param>
-    let afterLinked (duration: TimeSpan) (parentCt: CancellationToken) (work: CancellationToken -> Task<'T>) : Task<'T> =
+    let afterLinked
+        (duration: TimeSpan)
+        (parentCt: CancellationToken)
+        (work: CancellationToken -> Task<'T>)
+        : Task<'T> =
         task {
             use cts = new CancellationTokenSource(duration)
             use linked = CancellationTokenSource.CreateLinkedTokenSource(parentCt, cts.Token)
+
             try
                 return! work linked.Token
             with :? OperationCanceledException when cts.IsCancellationRequested && not parentCt.IsCancellationRequested ->

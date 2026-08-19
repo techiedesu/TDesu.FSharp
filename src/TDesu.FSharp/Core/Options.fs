@@ -7,7 +7,8 @@ module ValueOption =
     /// Converts a C# TryXxx <c>(bool * value)</c> tuple to a <see cref="ValueOption{T}"/>.
     /// <param name="status">The success flag from the TryXxx method.</param>
     /// <param name="value">The output value from the TryXxx method.</param>
-    let inline ofCSharpTryPattern (status, value) = if status then ValueSome value else ValueNone
+    let inline ofCSharpTryPattern (status, value) =
+        if status then ValueSome value else ValueNone
 
     /// <summary>
     /// Type-guard cast: returns <c>ValueSome(value :?> 'T)</c> if <paramref name="value"/> is of type
@@ -74,16 +75,14 @@ module Option =
 
     /// Returns true if the option contains true; false otherwise.
     /// <param name="v">The boolean option to check.</param>
-    let inline isTrue (v: bool option) =
-        Option.defaultValue false v
+    let inline isTrue (v: bool option) = Option.defaultValue false v
 
     /// <summary>
     /// Returns <c>None</c> if the string is null/empty/whitespace, otherwise <c>Some(s)</c>.
     /// </summary>
     /// <param name="s">The string to convert.</param>
     let inline ofString (s: string | null) =
-        if System.String.IsNullOrWhiteSpace(s) then None
-        else Some s
+        if System.String.IsNullOrWhiteSpace(s) then None else Some s
 
     /// <summary>
     /// Type-guard cast: returns <c>Some(value :?> 'T)</c> if <paramref name="value"/> is of type <c>'T</c>,
@@ -140,7 +139,9 @@ module Option =
     /// <param name="opt">The option to inspect.</param>
     let inline tee ([<InlineIfLambda>] f: 'T -> unit) (opt: 'T option) =
         match opt with
-        | Some v -> f v; opt
+        | Some v ->
+            f v
+            opt
         | None -> None
 
     /// <summary>
@@ -167,7 +168,12 @@ module Option =
     /// <param name="o1">The first option.</param>
     /// <param name="o2">The second option.</param>
     /// <param name="o3">The third option.</param>
-    let inline map3 ([<InlineIfLambda>] f: 'T1 -> 'T2 -> 'T3 -> 'TResult) (o1: 'T1 option) (o2: 'T2 option) (o3: 'T3 option) =
+    let inline map3
+        ([<InlineIfLambda>] f: 'T1 -> 'T2 -> 'T3 -> 'TResult)
+        (o1: 'T1 option)
+        (o2: 'T2 option)
+        (o3: 'T3 option)
+        =
         match o1, o2, o3 with
         | Some a, Some b, Some c -> Some(f a b c)
         | _ -> None
@@ -260,7 +266,9 @@ module Result =
     /// <param name="r">The result to inspect.</param>
     let inline tee ([<InlineIfLambda>] f: 'T -> unit) (r: Result<'T, 'TError>) =
         match r with
-        | Ok v -> f v; r
+        | Ok v ->
+            f v
+            r
         | Error _ -> r
 
     /// Applies a side-effect on Error and returns the result unchanged.
@@ -269,7 +277,9 @@ module Result =
     let inline teeError ([<InlineIfLambda>] f: 'TError -> unit) (r: Result<'T, 'TError>) =
         match r with
         | Ok _ -> r
-        | Error e -> f e; r
+        | Error e ->
+            f e
+            r
 
     /// Converts an Option to a Result: Some becomes Ok, None becomes Error.
     /// <param name="error">The error value to use when the option is None.</param>
@@ -306,20 +316,21 @@ module Result =
     /// Returns Ok(()) if true, Error(error) if false.
     /// <param name="error">The error value to use when the condition is false.</param>
     /// <param name="value">The boolean condition to check.</param>
-    let inline requireTrue (error: 'TError) (value: bool) =
-        if value then Ok() else Error error
+    let inline requireTrue (error: 'TError) (value: bool) = if value then Ok() else Error error
 
     /// Returns Ok(()) if false, Error(error) if true.
     /// <param name="error">The error value to use when the condition is true.</param>
     /// <param name="value">The boolean condition to check.</param>
-    let inline requireFalse (error: 'TError) (value: bool) =
-        if not value then Ok() else Error error
+    let inline requireFalse (error: 'TError) (value: bool) = if not value then Ok() else Error error
 
     /// Returns Ok(value) if not null, Error(error) if null.
     /// <param name="error">The error value to use when the value is null.</param>
     /// <param name="value">The value to check for null.</param>
     let inline requireNotNull (error: 'TError) (value: 'T) =
-        if obj.ReferenceEquals(value, null) then Error error else Ok value
+        if obj.ReferenceEquals(value, null) then
+            Error error
+        else
+            Ok value
 
     /// <summary>
     /// Wraps a function call in try/catch, returning <c>Ok</c> on success or <c>Error(exn)</c> on exception.
@@ -332,4 +343,7 @@ module Result =
     /// </example>
     /// <param name="f">The function to execute inside a try/catch.</param>
     let inline catch ([<InlineIfLambda>] f: unit -> 'T) : Result<'T, exn> =
-        try Ok(f ()) with e -> Error e
+        try
+            Ok(f ())
+        with e ->
+            Error e

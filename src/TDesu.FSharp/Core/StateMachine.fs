@@ -31,7 +31,10 @@ module StateMachine =
     /// <param name="newState">The state to transition to.</param>
     /// <param name="effects">Side effects to produce.</param>
     let inline goto newState effects =
-        Ok { NewState = newState; Effects = effects }
+        Ok {
+            NewState = newState
+            Effects = effects
+        }
 
     /// Stay in the current state, producing effects (pass <c>[]</c> for no effects).
     /// <param name="state">The current state to remain in.</param>
@@ -41,14 +44,15 @@ module StateMachine =
 
     /// Fail the transition with an error message.
     /// <param name="msg">The error message.</param>
-    let inline fail (msg: string) : Result<TransitionResult<'TState, 'TEffect>, string> =
-        Error msg
+    let inline fail (msg: string) : Result<TransitionResult<'TState, 'TEffect>, string> = Error msg
 
     /// Apply a transition result, keeping state unchanged on error.
     /// Returns (newState, Ok effects) or (unchangedState, Error msg).
     /// <param name="state">The current state (returned unchanged on error).</param>
     /// <param name="result">The transition result from your apply function.</param>
-    let tryApply (state: 'TState) (result: Result<TransitionResult<'TState, 'TEffect>, string>)
+    let tryApply
+        (state: 'TState)
+        (result: Result<TransitionResult<'TState, 'TEffect>, string>)
         : 'TState * Result<'TEffect list, string> =
         match result with
         | Ok r -> r.NewState, Ok r.Effects

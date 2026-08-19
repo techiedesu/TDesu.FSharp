@@ -13,10 +13,7 @@ module Stack =
             None
         else
             let x, y = stack.TryPeek()
-            if x then
-                Some y
-            else
-                None
+            if x then Some y else None
 
     /// Removes and returns the top element from the stack.
     /// A null <paramref name="stack"/> is treated as an empty stack, so it raises the same
@@ -25,10 +22,8 @@ module Stack =
     /// <param name="stack">The stack to pop from.</param>
     let inline pop (stack: Stack<'T>) =
         match stack with
-        | null ->
-            raise (invalidOp "Stack empty.")
-        | _ ->
-            stack.Pop()
+        | null -> raise (invalidOp "Stack empty.")
+        | _ -> stack.Pop()
 
     /// Pushes an item onto the top of the stack.
     /// <paramref name="stack"/> is the mutation target: unlike the read-only helpers in this module, a
@@ -45,10 +40,11 @@ module Stack =
     /// <param name="stack">The stack to reverse.</param>
     let reverse (stack: Stack<'T>) =
         let newStack = Stack<'T>()
+
         match stack with
-        | null ->
-            newStack
+        | null -> newStack
         | _ ->
             for item in stack do
                 newStack.Push(item)
+
             newStack

@@ -18,11 +18,15 @@ module Disposable =
     /// </example>
     /// <param name="f">The cleanup function to invoke on disposal.</param>
     let inline create ([<InlineIfLambda>] f: unit -> unit) =
-        { new IDisposable with member _.Dispose() = f () }
+        { new IDisposable with
+            member _.Dispose() = f ()
+        }
 
     /// An IDisposable that does nothing on Dispose.
-    let empty : IDisposable =
-        { new IDisposable with member _.Dispose() = () }
+    let empty: IDisposable =
+        { new IDisposable with
+            member _.Dispose() = ()
+        }
 
     /// <summary>
     /// Combines multiple disposables into one. All are disposed in reverse order.
@@ -44,32 +48,44 @@ module Disposable =
     let combine (disposables: IDisposable list) =
         let disposables = if isNotNullRef disposables then disposables else []
         let mutable disposed = 0
+
         { new IDisposable with
             member _.Dispose() =
                 if Threading.Interlocked.Exchange(&disposed, 1) = 0 then
                     let mutable errors = []
+
                     for d in disposables |> List.rev do
                         if not (obj.ReferenceEquals(d, null)) then
-                            try d.Dispose() with ex -> errors <- ex :: errors
+                            try
+                                d.Dispose()
+                            with ex ->
+                                errors <- ex :: errors
+
                     match errors with
                     | [] -> ()
                     | [ single ] -> raise single
-                    | _ -> aggregate errors }
+                    | _ -> aggregate errors
+        }
 
     /// Safely disposes a value (null-safe, no-op if null).
     /// <param name="d">The disposable to dispose.</param>
     let inline dispose (d: IDisposable) =
-        if not (obj.ReferenceEquals(d, null)) then d.Dispose()
+        if not (obj.ReferenceEquals(d, null)) then
+            d.Dispose()
 
     /// Disposes the inner value if Some, no-op if None.
     /// <param name="d">The optional disposable to dispose.</param>
     let inline disposeOption (d: IDisposable option) =
-        match d with Some v -> dispose v | None -> ()
+        match d with
+        | Some v -> dispose v
+        | None -> ()
 
     /// Disposes the inner value if ValueSome, no-op if ValueNone.
     /// <param name="d">The value-option disposable to dispose.</param>
     let inline disposeValueOption (d: IDisposable voption) =
-        match d with ValueSome v -> dispose v | ValueNone -> ()
+        match d with
+        | ValueSome v -> dispose v
+        | ValueNone -> ()
 
     /// <summary>
     /// Creates a disposable that runs the cleanup function at most once (thread-safe).
@@ -78,15 +94,20 @@ module Disposable =
     /// <param name="f">The cleanup function to run at most once.</param>
     let createOnce (f: unit -> unit) =
         let mutable disposed = 0
+
         { new IDisposable with
             member _.Dispose() =
                 if Threading.Interlocked.Exchange(&disposed, 1) = 0 then
-                    f () }
+                    f ()
+        }
 
     /// Wraps a function: creates a resource, applies f, then disposes the resource.
     /// <param name="create">Factory function that produces the disposable resource.</param>
     /// <param name="f">Function to apply to the created resource.</param>
-    let inline using ([<InlineIfLambda>] create: unit -> 'T when 'T :> IDisposable) ([<InlineIfLambda>] f: 'T -> 'R) : 'R =
+    let inline using
+        ([<InlineIfLambda>] create: unit -> 'T when 'T :> IDisposable)
+        ([<InlineIfLambda>] f: 'T -> 'R)
+        : 'R =
         use resource = create ()
         f resource
 
@@ -109,13 +130,23 @@ module Disposable =
 
         /// Adds a disposable to dispose on Dispose.
         member _.AddDisposable(d: IDisposable) =
-            actions <- (fun () -> if not (obj.ReferenceEquals(d, null)) then d.Dispose()) :: actions
+            actions <-
+                (fun () ->
+                    if not (obj.ReferenceEquals(d, null)) then
+                        d.Dispose()
+                )
+                :: actions
 
         interface IDisposable with
             member _.Dispose() =
                 let mutable errors = []
+
                 for f in actions do
-                    try f () with ex -> errors <- ex :: errors
+                    try
+                        f ()
+                    with ex ->
+                        errors <- ex :: errors
+
                 match errors with
                 | [] -> ()
                 | [ single ] -> raise single
@@ -129,9 +160,23 @@ module Disposable =
         let g = Guid.NewGuid()
         let path = IO.Path.Combine(IO.Path.GetTempPath(), g.ToString("N"))
         System.IO.Directory.CreateDirectory(path) |> ignore
-        path, create (fun () -> try System.IO.Directory.Delete(path, true) with _ -> ())
+
+        path,
+        create (fun () ->
+            try
+                System.IO.Directory.Delete(path, true)
+            with _ ->
+                ()
+        )
 
     /// Creates a temporary file path that is deleted on Dispose.
     let tempFile () =
         let path = IO.Path.GetTempFileName()
-        path, create (fun () -> try System.IO.File.Delete(path) with _ -> ())
+
+        path,
+        create (fun () ->
+            try
+                System.IO.File.Delete(path)
+            with _ ->
+                ()
+        )

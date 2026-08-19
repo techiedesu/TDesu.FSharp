@@ -15,13 +15,19 @@ module ApiResponse =
 
     /// Creates a success response.
     /// <param name="data">The data payload for the success response.</param>
-    let inline ok (data: 'TData) : T<'TData, 'TError> =
-        { Success = true; Data = Some data; Error = None }
+    let inline ok (data: 'TData) : T<'TData, 'TError> = {
+        Success = true
+        Data = Some data
+        Error = None
+    }
 
     /// Creates an error response.
     /// <param name="err">The error value for the failure response.</param>
-    let inline error (err: 'TError) : T<'TData, 'TError> =
-        { Success = false; Data = None; Error = Some err }
+    let inline error (err: 'TError) : T<'TData, 'TError> = {
+        Success = false
+        Data = None
+        Error = Some err
+    }
 
     /// Converts a Result to an API response.
     /// <param name="result">The Result value to convert.</param>
@@ -46,7 +52,7 @@ module ApiResponse =
             | None -> invalidOp "API success=false but error is missing"
 
 /// A string guaranteed to be non-null and non-empty/whitespace.
-type NonEmptyString = private NonEmptyString of string
+type NonEmptyString = private | NonEmptyString of string
 
 /// Error cases for NonEmptyString creation.
 [<RequireQualifiedAccess>]
@@ -66,7 +72,7 @@ module NonEmptyString =
         elif System.String.IsNullOrWhiteSpace s then
             Error NonEmptyStringError.Empty
         else
-            Ok (NonEmptyString s)
+            Ok(NonEmptyString s)
 
     /// Create a NonEmptyString, throwing if invalid.
     /// <param name="s">The raw string to validate and wrap.</param>

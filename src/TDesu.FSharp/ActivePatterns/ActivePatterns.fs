@@ -18,8 +18,7 @@ module String =
 
     /// Matches when the string has zero length. Does not match null.
     /// <param name="str">The string to test.</param>
-    let inline (|Empty|_|) (str: string) =
-        isNotNullRef str && str.Length = 0
+    let inline (|Empty|_|) (str: string) = isNotNullRef str && str.Length = 0
 
     /// Matches when the string is exactly a single whitespace character. Does not match null.
     /// <param name="str">The string to test.</param>
@@ -29,13 +28,18 @@ module String =
     /// Matches when the string contains only whitespace characters and has length > 1. Does not match null.
     /// <param name="str">The string to test.</param>
     let inline (|WhiteSpaces|_|) (str: string) =
-        if isNull str || str.Length <= 1 then false
+        if isNull str || str.Length <= 1 then
+            false
         else
             let mutable i = 0
             let mutable allWhite = true
+
             while allWhite && i < str.Length do
-                if not (Char.IsWhiteSpace str[i]) then allWhite <- false
+                if not (Char.IsWhiteSpace str[i]) then
+                    allWhite <- false
+
                 i <- i + 1
+
             allWhite
 
     /// Matches when the string is empty or contains only whitespace. Does not match null.
@@ -45,14 +49,12 @@ module String =
 
     /// Matches when the string is null, empty, or whitespace.
     /// <param name="str">The string to test.</param>
-    let inline (|NullOrWhiteSpace|_|) (str: string) =
-        String.isNullOrWhiteSpace str
+    let inline (|NullOrWhiteSpace|_|) (str: string) = String.isNullOrWhiteSpace str
 
     /// Matches when the string starts with any of the given values.
     /// <param name="values">The prefixes to check against.</param>
     /// <param name="str">The string to test.</param>
-    let inline (|StartsWithAny|_|) (values: string[]) (str: string) =
-        String.startsWithAny values str
+    let inline (|StartsWithAny|_|) (values: string[]) (str: string) = String.startsWithAny values str
 
 /// Parse active patterns — match and extract parsed values from strings.
 module Parse =
@@ -103,5 +105,4 @@ module Ref =
 
     /// Matches when the value is a null reference.
     /// <param name="obj">The value to test for null.</param>
-    let inline (|Null|_|) obj =
-        Object.ReferenceEquals(obj, null)
+    let inline (|Null|_|) obj = Object.ReferenceEquals(obj, null)

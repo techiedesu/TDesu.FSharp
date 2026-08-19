@@ -48,7 +48,8 @@ module Guard =
     /// <param name="msg">Exception message.</param>
     /// <param name="condition">Condition that must be true.</param>
     let inline isTrue (paramName: string) (msg: string) (condition: bool) =
-        if not condition then invalidArg paramName msg
+        if not condition then
+            invalidArg paramName msg
 
     /// <summary>
     /// Throws <see cref="System.ArgumentException"/> if condition is true.
@@ -58,7 +59,8 @@ module Guard =
     /// <param name="msg">Exception message.</param>
     /// <param name="condition">Condition that must be false.</param>
     let inline isFalse (paramName: string) (msg: string) (condition: bool) =
-        if condition then invalidArg paramName msg
+        if condition then
+            invalidArg paramName msg
 
     /// <summary>
     /// Throws <see cref="System.ArgumentOutOfRangeException"/> if value is not between lo and hi (inclusive).
