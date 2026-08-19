@@ -1,3 +1,22 @@
+## 1.4.1
+
+No API change — infrastructure, tests and formatting only.
+
+### Added
+- Tests for the modules that had none: `CancellationToken` helpers, `File`/`Directory`/`Path`,
+  `TemporaryFileStream`, the `ArrayPool` helpers (including that the buffer is returned when the
+  callback throws) and `PeriodicTimer` cancellation. 477 tests to 517
+- `RELEASING.md`, documenting the release process `release.yml` already implements
+- `manage.fsx benchcheck` — compiles the benchmark project, now gated in CI so benchmark code
+  cannot rot into non-compiling code unnoticed
+- `manage.fsx format` / `format --check`, gated in CI. The repository is formatted with
+  Funtomatoes; the style is pinned in `.editorconfig` and the tool version in the manifest so
+  neither can change the whole tree by surprise
+
+### Changed
+- `Concurrency/Concurrency.fs` split one file per type, the last multi-module file left
+- `end_of_line = unset` dropped from `.editorconfig`: not a valid value
+
 ## 1.4.0
 
 ### Added
