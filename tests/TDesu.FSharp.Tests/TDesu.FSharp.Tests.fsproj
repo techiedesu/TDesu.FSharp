@@ -20,6 +20,7 @@
         <Compile Include="Core\OptionTests.fs" />
         <Compile Include="Core\ResultTests.fs" />
         <Compile Include="Core\NumericsTests.fs" />
+        <Compile Include="Core\NumericParsingTests.fs" />
         <Compile Include="Core\ValidationTests.fs" />
         <Compile Include="Core\StateMachineTests.fs" />
         <Compile Include="Collections\CollectionsTests.fs" />

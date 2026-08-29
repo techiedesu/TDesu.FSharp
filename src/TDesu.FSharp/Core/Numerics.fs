@@ -132,9 +132,34 @@ type EnumShape<'enum
     and 'enum: (static member (^^^): 'enum -> 'enum -> 'enum)
     and 'enum: (static member (&&&): 'enum -> 'enum -> 'enum)> = 'enum
 
-/// Bitwise flag helpers for <c>[&lt;Flags&gt;]</c> enums, generic over any enum type via <see cref="EnumShape{T}"/>.
+/// Parsing and bitwise flag helpers for enums, generic over any enum type via
+/// <see cref="EnumShape{T}"/>.
 [<RequireQualifiedAccess>]
 module Enum =
+
+    /// Parses a string as a case of the enum <c>'T</c>, returning <c>Some(value)</c> or <c>None</c>.
+    /// Matching is case-sensitive; the numeric spelling of a case is accepted, as it is by the BCL.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParse<'T when 'T: struct and 'T :> Enum and 'T: (new: unit -> 'T)> (str: string) =
+        Enum.TryParse<'T>(str) |> Option.ofCSharpTryPattern
+
+    /// Parses a string as a case of the enum <c>'T</c>, ignoring case, returning <c>Some(value)</c>
+    /// or <c>None</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseIgnoreCase<'T when 'T: struct and 'T :> Enum and 'T: (new: unit -> 'T)> (str: string) =
+        Enum.TryParse<'T>(str, true) |> Option.ofCSharpTryPattern
+
+    /// Parses a string as a case of the enum <c>'T</c>, returning <c>ValueSome(value)</c> or
+    /// <c>ValueNone</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseV<'T when 'T: struct and 'T :> Enum and 'T: (new: unit -> 'T)> (str: string) =
+        Enum.TryParse<'T>(str) |> ValueOption.ofCSharpTryPattern
+
+    /// Parses a string as a case of the enum <c>'T</c>, ignoring case, returning
+    /// <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseVIgnoreCase<'T when 'T: struct and 'T :> Enum and 'T: (new: unit -> 'T)> (str: string) =
+        Enum.TryParse<'T>(str, true) |> ValueOption.ofCSharpTryPattern
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="value"/> has every bit of <paramref name="flag"/> set.

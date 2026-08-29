@@ -24,6 +24,10 @@
 
     <ItemGroup>
         <Compile Include="Core\Operators.fs" />
+        <!-- Ahead of everything that parses: the `Option`/`ValueOption` TryXxx adapters live here, and
+             `Char`, `NumericParsing` and `Numerics` all build their `tryParse` on them. This file
+             itself only needs `Operators`. -->
+        <Compile Include="Core\Options.fs" />
         <Compile Include="Core\Byref.fs" />
         <Compile Include="Core\Guard.fs" />
         <Compile Include="Core\UnixTime.fs" />
@@ -31,7 +35,6 @@
         <Compile Include="Core\Regex.fs" />
         <Compile Include="Core\Clock.fs" />
         <Compile Include="Core\String.fs" />
-        <Compile Include="Core\Options.fs" />
         <Compile Include="Core\NumericParsing.fs" />
         <Compile Include="Core\Numerics.fs" />
         <Compile Include="Collections\Dictionary.fs" />
