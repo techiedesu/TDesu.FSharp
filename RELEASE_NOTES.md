@@ -1,3 +1,43 @@
+## 1.5.0-alpha.1
+
+Pre-release: the culture change below alters what existing float and date parsers accept, so it wants
+use against real data before a stable `1.5.0`.
+
+### Added
+- `tryParseV` returning `ValueOption` beside every `tryParse` — the parity the library already keeps
+  between `Tasks/TaskOption.fs` and `Tasks/TaskVOption.fs`, which the parsers were the last place to
+  be missing. `tryParse` remains the one to reach for: it composes with `List.choose`, `Option.map`
+  and the rest of FSharp.Core, and `tryParseV` only pays off where the value stays out of them
+- Parsers for the types that had none: `SByte`, `UInt16`, `UInt32`, `UInt64`, `DateTime`, `TimeSpan`
+- `Char.tryParse` / `Char.tryParseV` — a string of any length but one is a failure, not a truncation
+- `Version.tryParse` / `Version.tryParseV`
+- `Enum.tryParse` / `tryParseIgnoreCase` / `tryParseV` / `tryParseVIgnoreCase`, generic over the enum
+- Tests for the parsing modules, which had none at all: 517 tests to 557
+
+### Changed
+- **Floating point and dates now parse against the invariant culture rather than the ambient one.**
+  `Double.tryParse "1.5"` returned `None` on every locale whose decimal separator is a comma — ru-RU,
+  de-DE, fr-FR, most of Europe — because the ambient culture decided what a decimal point meant. The
+  text these functions actually receive is machine-generated (a database column, a JSON number, a
+  protocol field, a config value) and is invariant by construction, so the ambient culture was never
+  the right question to ask of it. Affects `Single`, `Double`, `Decimal`, `DateTimeOffset` and the new
+  `DateTime` and `TimeSpan`
+- Group separators are no longer accepted in floating point: `Double.tryParse "1,234.5"` is now
+  `None` where it used to be `Some 1234.5` on an English locale. This is the deliberate half of the
+  change above — under the invariant culture the comma *is* the group separator, so permitting it read
+  `"1,5"` as `15.0`, ten times the intended value and silently. A rejected parse the caller can see
+  beats a plausible wrong number
+- `Core/Options.fs` now compiles ahead of `Core/Char.fs` instead of after `Core/String.fs`, so the
+  `Option`/`ValueOption` TryXxx adapters are in scope for every parser that builds on them. It depends
+  on nothing but `Core/Operators.fs`
+
+### Not added, and why
+- `DateOnly`, `TimeOnly`, `Int128`, `UInt128` and `Half` have no parser: the package targets
+  `netstandard2.1` and none of those types exist there — verified by compiling each against the
+  netstandard2.1 reference assemblies, which reports all five as undefined. `netstandard` has no
+  version above 2.1, so the only way to reach them is to target .NET directly, which this package
+  deliberately does not do
+
 ## 1.4.1
 
 No API change — infrastructure, tests and formatting only.
