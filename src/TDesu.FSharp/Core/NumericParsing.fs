@@ -16,17 +16,23 @@ open System.Globalization
 //
 // On culture. Integer parsing is culture-insensitive for the input these functions actually receive:
 // the default `NumberStyles.Integer` permits a sign and surrounding whitespace, and nothing else that a
-// locale can redefine. Floating point and the date types are a different matter — the decimal separator
-// and the date format are exactly what a locale changes — so those parse against
-// `CultureInfo.InvariantCulture` here rather than the ambient one.
+// locale can redefine, so those modules offer one parser and no variants. Floating point and the date
+// types are a different matter — the decimal separator and the date format are exactly what a locale
+// redefines — so each of those offers both, named the way this library already names the distinction in
+// `Char.toUpper`/`toUpperInv` and `String.toLower`/`toLowerInv`: the bare name follows the ambient
+// culture, the `Inv` suffix pins the invariant one.
 //
-// That is a deliberate change from parsing with the current culture, and the reason is that a parser in
-// a general-purpose library overwhelmingly receives machine-generated text: a database column, a JSON
-// number, a protocol field, a config file. Such text is invariant by construction, so a current-culture
-// default means the same string parses on the developer's machine and returns `None` on a server whose
-// locale writes `1,5` — a failure that depends on the host and appears as missing data rather than as an
-// error. A caller that genuinely wants a human's locale wants `Double.TryParse` with an explicit
-// provider, and should say so at the call site rather than inherit it by accident.
+// Which to reach for is not a toss-up. Text that came from a machine — a database column, a JSON
+// number, a protocol field, a config value — is invariant by construction, and parsing it with
+// `tryParse` makes the result depend on the host: `Double.tryParse "1.5"` is `None` on every locale
+// whose decimal separator is a comma, which is most of Europe, and the failure surfaces as missing data
+// rather than as an error. Such a caller wants `tryParseInv`. `tryParse` is for text a person typed in
+// their own locale, which is the only case where the ambient culture is the question being asked.
+//
+// The `Inv` parsers also refuse group separators, which the ambient ones inherit from the BCL default.
+// Under the invariant culture the group separator is a comma, so allowing it would read `"1,5"` as
+// `15.0` — ten times the intended value, silently. For machine text a group separator is not a thing
+// that legitimately occurs, so refusing it costs nothing and removes the corruption.
 
 [<RequireQualifiedAccess>]
 module SByte =
@@ -126,62 +132,98 @@ module UInt64 =
 
 [<RequireQualifiedAccess>]
 module Single =
-    // No `AllowThousands`: the invariant group separator is a comma, so allowing it would parse the
-    // European spelling "1,5" as 15.0 — silently ten times the intended value. Machine-generated
-    // numbers carry no group separators, so the styles that would corrupt them are simply refused.
     [<Literal>]
-    let private styles = NumberStyles.Float
+    let private invStyles = NumberStyles.Float
 
-    /// Parses a string as float32 against the invariant culture, returning <c>Some(value)</c> or
-    /// <c>None</c>. See the note at the top of this file on why the culture is not the ambient one.
+    /// Parses a string as float32 using the ambient culture, returning <c>Some(value)</c> or
+    /// <c>None</c>. For text that came from a machine rather than from a person, use
+    /// <c>tryParseInv</c> — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        Single.TryParse(str, styles, CultureInfo.InvariantCulture)
-        |> Option.ofCSharpTryPattern
+        Single.TryParse(str) |> Option.ofCSharpTryPattern
 
-    /// Parses a string as float32 against the invariant culture, returning <c>ValueSome(value)</c> or
+    /// Parses a string as float32 using the ambient culture, returning <c>ValueSome(value)</c> or
     /// <c>ValueNone</c>.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        Single.TryParse(str, styles, CultureInfo.InvariantCulture)
+        Single.TryParse(str) |> ValueOption.ofCSharpTryPattern
+
+    /// Parses a string as float32 against the invariant culture, refusing group separators. This is
+    /// the one to use for machine-generated text, whose meaning must not depend on the host's locale.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInv (str: string) =
+        Single.TryParse(str, invStyles, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
+
+    /// Parses a string as float32 against the invariant culture, refusing group separators, returning
+    /// <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInvV (str: string) =
+        Single.TryParse(str, invStyles, CultureInfo.InvariantCulture)
         |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module Double =
     [<Literal>]
-    let private styles = NumberStyles.Float
+    let private invStyles = NumberStyles.Float
 
-    /// Parses a string as double against the invariant culture, returning <c>Some(value)</c> or
-    /// <c>None</c>. See the note at the top of this file on why the culture is not the ambient one.
+    /// Parses a string as double using the ambient culture, returning <c>Some(value)</c> or
+    /// <c>None</c>. For text that came from a machine rather than from a person, use
+    /// <c>tryParseInv</c> — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        Double.TryParse(str, styles, CultureInfo.InvariantCulture)
-        |> Option.ofCSharpTryPattern
+        Double.TryParse(str) |> Option.ofCSharpTryPattern
 
-    /// Parses a string as double against the invariant culture, returning <c>ValueSome(value)</c> or
+    /// Parses a string as double using the ambient culture, returning <c>ValueSome(value)</c> or
     /// <c>ValueNone</c>.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        Double.TryParse(str, styles, CultureInfo.InvariantCulture)
+        Double.TryParse(str) |> ValueOption.ofCSharpTryPattern
+
+    /// Parses a string as double against the invariant culture, refusing group separators. This is
+    /// the one to use for machine-generated text, whose meaning must not depend on the host's locale.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInv (str: string) =
+        Double.TryParse(str, invStyles, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
+
+    /// Parses a string as double against the invariant culture, refusing group separators, returning
+    /// <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInvV (str: string) =
+        Double.TryParse(str, invStyles, CultureInfo.InvariantCulture)
         |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module Decimal =
     [<Literal>]
-    let private styles = NumberStyles.Float
+    let private invStyles = NumberStyles.Float
 
-    /// Parses a string as decimal against the invariant culture, returning <c>Some(value)</c> or
-    /// <c>None</c>. See the note at the top of this file on why the culture is not the ambient one.
+    /// Parses a string as decimal using the ambient culture, returning <c>Some(value)</c> or
+    /// <c>None</c>. For text that came from a machine rather than from a person, use
+    /// <c>tryParseInv</c> — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        Decimal.TryParse(str, styles, CultureInfo.InvariantCulture)
-        |> Option.ofCSharpTryPattern
+        Decimal.TryParse(str) |> Option.ofCSharpTryPattern
 
-    /// Parses a string as decimal against the invariant culture, returning <c>ValueSome(value)</c> or
+    /// Parses a string as decimal using the ambient culture, returning <c>ValueSome(value)</c> or
     /// <c>ValueNone</c>.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        Decimal.TryParse(str, styles, CultureInfo.InvariantCulture)
+        Decimal.TryParse(str) |> ValueOption.ofCSharpTryPattern
+
+    /// Parses a string as decimal against the invariant culture, refusing group separators. This is
+    /// the one to use for machine-generated text, whose meaning must not depend on the host's locale.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInv (str: string) =
+        Decimal.TryParse(str, invStyles, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
+
+    /// Parses a string as decimal against the invariant culture, refusing group separators, returning
+    /// <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInvV (str: string) =
+        Decimal.TryParse(str, invStyles, CultureInfo.InvariantCulture)
         |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
@@ -210,49 +252,88 @@ module Guid =
 
 [<RequireQualifiedAccess>]
 module DateTime =
-    /// Parses a string as DateTime against the invariant culture, returning <c>Some(value)</c> or
-    /// <c>None</c>. See the note at the top of this file on why the culture is not the ambient one.
+    /// Parses a string as DateTime using the ambient culture, returning <c>Some(value)</c> or
+    /// <c>None</c>. For text that came from a machine rather than from a person, use
+    /// <c>tryParseInv</c> — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
-        |> Option.ofCSharpTryPattern
+        DateTime.TryParse(str) |> Option.ofCSharpTryPattern
 
-    /// Parses a string as DateTime against the invariant culture, returning <c>ValueSome(value)</c> or
+    /// Parses a string as DateTime using the ambient culture, returning <c>ValueSome(value)</c> or
     /// <c>ValueNone</c>.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
+        DateTime.TryParse(str) |> ValueOption.ofCSharpTryPattern
+
+    /// Parses a string as DateTime against the invariant culture. This is the one to use for
+    /// machine-generated text, whose meaning must not depend on the host's locale.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInv (str: string) =
+        DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
+        |> Option.ofCSharpTryPattern
+
+    /// Parses a string as DateTime against the invariant culture, returning <c>ValueSome(value)</c>
+    /// or <c>ValueNone</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInvV (str: string) =
         DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
         |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module DateTimeOffset =
-    /// Parses a string as DateTimeOffset against the invariant culture, returning <c>Some(value)</c> or
-    /// <c>None</c>. See the note at the top of this file on why the culture is not the ambient one.
+    /// Parses a string as DateTimeOffset using the ambient culture, returning <c>Some(value)</c> or
+    /// <c>None</c>. For text that came from a machine rather than from a person, use
+    /// <c>tryParseInv</c> — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
+        DateTimeOffset.TryParse(str) |> Option.ofCSharpTryPattern
+
+    /// Parses a string as DateTimeOffset using the ambient culture, returning <c>ValueSome(value)</c>
+    /// or <c>ValueNone</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseV (str: string) =
+        DateTimeOffset.TryParse(str) |> ValueOption.ofCSharpTryPattern
+
+    /// Parses a string as DateTimeOffset against the invariant culture. This is the one to use for
+    /// machine-generated text, whose meaning must not depend on the host's locale.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInv (str: string) =
         DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
         |> Option.ofCSharpTryPattern
 
     /// Parses a string as DateTimeOffset against the invariant culture, returning
     /// <c>ValueSome(value)</c> or <c>ValueNone</c>.
     /// <param name="str">The string to parse.</param>
-    let inline tryParseV (str: string) =
+    let inline tryParseInvV (str: string) =
         DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
         |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module TimeSpan =
-    /// Parses a string as TimeSpan against the invariant culture, returning <c>Some(value)</c> or
-    /// <c>None</c>. See the note at the top of this file on why the culture is not the ambient one.
+    /// Parses a string as TimeSpan using the ambient culture, returning <c>Some(value)</c> or
+    /// <c>None</c>. For text that came from a machine rather than from a person, use
+    /// <c>tryParseInv</c> — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        TimeSpan.TryParse(str, CultureInfo.InvariantCulture)
-        |> Option.ofCSharpTryPattern
+        TimeSpan.TryParse(str) |> Option.ofCSharpTryPattern
 
-    /// Parses a string as TimeSpan against the invariant culture, returning <c>ValueSome(value)</c> or
+    /// Parses a string as TimeSpan using the ambient culture, returning <c>ValueSome(value)</c> or
     /// <c>ValueNone</c>.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
+        TimeSpan.TryParse(str) |> ValueOption.ofCSharpTryPattern
+
+    /// Parses a string as TimeSpan against the invariant culture. This is the one to use for
+    /// machine-generated text, whose meaning must not depend on the host's locale.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInv (str: string) =
+        TimeSpan.TryParse(str, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
+
+    /// Parses a string as TimeSpan against the invariant culture, returning <c>ValueSome(value)</c>
+    /// or <c>ValueNone</c>.
+    /// <param name="str">The string to parse.</param>
+    let inline tryParseInvV (str: string) =
         TimeSpan.TryParse(str, CultureInfo.InvariantCulture)
         |> ValueOption.ofCSharpTryPattern
 

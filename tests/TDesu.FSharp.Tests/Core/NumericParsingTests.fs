@@ -97,80 +97,97 @@ type NumericParsingTests() =
         equals (Int16.tryParseV "bad") ValueNone
         equals (Double.tryParseV "bad") ValueNone
 
-    // ── Floating point ──
+    // ── Floating point, invariant ──
 
     [<Test>]
-    member _.``Double tryParse reads a decimal point``() = isSome 1.5 (Double.tryParse "1.5")
+    member _.``Double tryParseInv reads a decimal point``() = isSome 1.5 (Double.tryParseInv "1.5")
 
     [<Test>]
-    member _.``Double tryParse reads exponent notation``() = isSome 1000.0 (Double.tryParse "1e3")
+    member _.``Double tryParseInv reads exponent notation``() =
+        isSome 1000.0 (Double.tryParseInv "1e3")
 
     [<Test>]
-    member _.``Double tryParse reads a negative fraction``() = isSome -0.25 (Double.tryParse "-0.25")
+    member _.``Double tryParseInv reads a negative fraction``() =
+        isSome -0.25 (Double.tryParseInv "-0.25")
 
-    /// The comma is the invariant group separator, so permitting group separators would read the
-    /// European spelling of one-and-a-half as fifteen. Rejecting it keeps a mis-formatted number a
-    /// parse failure the caller can see instead of a value ten times too large.
+    /// Under the invariant culture the comma is the group separator, so accepting group separators
+    /// would read the European spelling of one-and-a-half as fifteen. Refusing them keeps a
+    /// mis-formatted number a visible parse failure instead of a value ten times too large.
     [<Test>]
-    member _.``Double tryParse rejects a comma rather than reading it as a group separator``() =
-        isNone (Double.tryParse "1,5")
-        isNone (Double.tryParse "1,234.5")
-
-    [<Test>]
-    member _.``Single tryParse reads a decimal point and rejects a comma``() =
-        isSome 2.5f (Single.tryParse "2.5")
-        isNone (Single.tryParse "2,5")
+    member _.``Double tryParseInv refuses group separators``() =
+        isNone (Double.tryParseInv "1,5")
+        isNone (Double.tryParseInv "1,234.5")
 
     [<Test>]
-    member _.``Decimal tryParse reads a decimal point and rejects a comma``() =
-        isSome 1.5m (Decimal.tryParse "1.5")
-        isNone (Decimal.tryParse "1,5")
+    member _.``Single tryParseInv reads a decimal point and refuses a comma``() =
+        isSome 2.5f (Single.tryParseInv "2.5")
+        isNone (Single.tryParseInv "2,5")
 
-    // ── Culture independence ──
-
-    /// The whole point of parsing against the invariant culture: the same string must produce the same
-    /// value on a developer's machine and on a server whose locale writes numbers differently. Under
-    /// the ambient culture these four assertions fail on a comma-decimal locale.
     [<Test>]
-    member _.``float parsing does not depend on the ambient culture``() =
+    member _.``Decimal tryParseInv reads a decimal point and refuses a comma``() =
+        isSome 1.5m (Decimal.tryParseInv "1.5")
+        isNone (Decimal.tryParseInv "1,5")
+
+    // ── Which culture each half answers to ──
+
+    /// The point of the `Inv` half: the same string yields the same value on a developer's machine and
+    /// on a server whose locale writes numbers differently. Every assertion here fails if the parser
+    /// consults the ambient culture.
+    [<Test>]
+    member _.``tryParseInv does not depend on the ambient culture``() =
         withCulture
             "ru-RU"
             (fun () ->
-                isSome 1.5 (Double.tryParse "1.5")
-                isSome 2.5f (Single.tryParse "2.5")
-                isSome 1.5m (Decimal.tryParse "1.5")
-                isNone (Double.tryParse "1,5")
+                isSome 1.5 (Double.tryParseInv "1.5")
+                isSome 2.5f (Single.tryParseInv "2.5")
+                isSome 1.5m (Decimal.tryParseInv "1.5")
+                isNone (Double.tryParseInv "1,5")
+                isSome (DateTime(2026, 8, 29)) (DateTime.tryParseInv "2026-08-29")
+                isSome (TimeSpan.FromMinutes 5.0) (TimeSpan.tryParseInv "00:05:00")
             )
 
+    /// The mirror obligation, and the reason the plain name is not simply an alias: `tryParse` must
+    /// follow the host's locale, so on a comma-decimal one it reads `"1,5"` as one-and-a-half and
+    /// stops recognising the dotted spelling. This is what a caller parsing text a person typed
+    /// wants, and what a caller parsing a database column must avoid.
     [<Test>]
-    member _.``date parsing does not depend on the ambient culture``() =
+    member _.``tryParse follows the ambient culture``() =
         withCulture
             "ru-RU"
             (fun () ->
-                isSome (DateTime(2026, 8, 29)) (DateTime.tryParse "2026-08-29")
-                isSome (TimeSpan.FromMinutes 5.0) (TimeSpan.tryParse "00:05:00")
+                isSome 1.5 (Double.tryParse "1,5")
+                isSome 1.5m (Decimal.tryParse "1,5")
+                isNone (Double.tryParse "1.5")
             )
 
     // ── Dates and times ──
 
     [<Test>]
-    member _.``DateTime tryParse reads an ISO date and time``() =
-        isSome (DateTime(2026, 8, 29, 14, 3, 0)) (DateTime.tryParse "2026-08-29 14:03:00")
+    member _.``DateTime tryParseInv reads an ISO date and time``() =
+        isSome (DateTime(2026, 8, 29, 14, 3, 0)) (DateTime.tryParseInv "2026-08-29 14:03:00")
 
     [<Test>]
-    member _.``DateTime tryParse rejects a non-date``() = isNone (DateTime.tryParse "not a date")
+    member _.``DateTime tryParseInv rejects a non-date``() =
+        isNone (DateTime.tryParseInv "not a date")
 
     [<Test>]
-    member _.``DateTimeOffset tryParse keeps the stated offset``() =
-        let parsed = DateTimeOffset.tryParse "2026-08-29T14:03:00+03:00"
+    member _.``DateTimeOffset tryParseInv keeps the stated offset``() =
+        let parsed = DateTimeOffset.tryParseInv "2026-08-29T14:03:00+03:00"
         equals (parsed |> Option.map _.Offset) (Some(TimeSpan.FromHours 3.0))
 
     [<Test>]
-    member _.``TimeSpan tryParse reads days and time``() =
-        isSome (TimeSpan(1, 2, 3, 4)) (TimeSpan.tryParse "1.02:03:04")
+    member _.``TimeSpan tryParseInv reads days and time``() =
+        isSome (TimeSpan(1, 2, 3, 4)) (TimeSpan.tryParseInv "1.02:03:04")
 
     [<Test>]
-    member _.``TimeSpan tryParse rejects a non-duration``() = isNone (TimeSpan.tryParse "later")
+    member _.``TimeSpan tryParseInv rejects a non-duration``() = isNone (TimeSpan.tryParseInv "later")
+
+    /// The ambient half exists for these types too, and an ISO string is unambiguous enough that a
+    /// dot-decimal host reads it either way — which is exactly why the distinction has to be tested
+    /// under a forced culture above rather than here.
+    [<Test>]
+    member _.``DateTime tryParse reads an ISO date under the host culture``() =
+        isSome (DateTime(2026, 8, 29)) (DateTime.tryParse "2026-08-29")
 
     // ── Remaining modules ──
 
