@@ -1,3 +1,36 @@
+## 1.5.0-alpha.2
+
+Corrects the one thing `alpha.1` got wrong: which name gets the invariant culture.
+
+### Added
+- `tryParseInv` / `tryParseInvV` on the six culture-sensitive modules — `Single`, `Double`, `Decimal`,
+  `DateTime`, `DateTimeOffset`, `TimeSpan`. These pin `CultureInfo.InvariantCulture`, and the numeric
+  ones also refuse group separators, because under the invariant culture the comma *is* the group
+  separator and allowing it read `"1,5"` as `15.0` — ten times the intended value, silently
+
+### Changed
+- **`tryParse` follows the ambient culture again**, restoring the `1.4.1` behaviour that `alpha.1`
+  replaced. `alpha.1` made the bare name invariant, which contradicted the naming this library already
+  uses for exactly this distinction in `Char.toUpper`/`toUpperInv` and `String.toLower`/`toLowerInv`:
+  the plain name follows the host, the `Inv` suffix pins the invariant. Making the parsers the one
+  exception was the wrong call, and it silently changed behaviour for existing callers on top of it.
+  The hazard `alpha.1` was reacting to is real — `Double.tryParse "1.5"` is `None` on any
+  comma-decimal locale, and machine-generated text must never depend on the host — but the answer is
+  a second name the caller chooses, not a redefinition of the first
+- The integer modules, `Boolean`, `Guid`, `Char`, `Version` and `Enum` get no `Inv` variant: nothing a
+  locale redefines reaches them, so a second name would be noise
+
+### Migration from alpha.1
+- Anything parsing machine-generated text — a database column, a JSON number, a protocol field, a
+  config value — should read `tryParseInv` where it currently reads `tryParse`. That is what `alpha.1`
+  silently did for you; now it is written at the call site
+- Anything parsing what a person typed in their own locale keeps `tryParse` and is now correct again
+
+### Tests
+- The culture contract is locked in both directions: one test forces `ru-RU` and asserts `tryParseInv`
+  is unmoved by it, a second forces the same culture and asserts `tryParse` does follow it — reading
+  `"1,5"` as one-and-a-half and refusing `"1.5"`. 557 tests to 558
+
 ## 1.5.0-alpha.1
 
 Pre-release: the culture change below alters what existing float and date parsers accept, so it wants
