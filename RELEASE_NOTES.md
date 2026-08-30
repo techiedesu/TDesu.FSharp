@@ -1,68 +1,32 @@
-## 1.5.0-alpha.2
+## 1.5.0
 
-Corrects the one thing `alpha.1` got wrong: which name gets the invariant culture.
-
-### Added
-- `tryParseInv` / `tryParseInvV` on the six culture-sensitive modules — `Single`, `Double`, `Decimal`,
-  `DateTime`, `DateTimeOffset`, `TimeSpan`. These pin `CultureInfo.InvariantCulture`, and the numeric
-  ones also refuse group separators, because under the invariant culture the comma *is* the group
-  separator and allowing it read `"1,5"` as `15.0` — ten times the intended value, silently
-
-### Changed
-- **`tryParse` follows the ambient culture again**, restoring the `1.4.1` behaviour that `alpha.1`
-  replaced. `alpha.1` made the bare name invariant, which contradicted the naming this library already
-  uses for exactly this distinction in `Char.toUpper`/`toUpperInv` and `String.toLower`/`toLowerInv`:
-  the plain name follows the host, the `Inv` suffix pins the invariant. Making the parsers the one
-  exception was the wrong call, and it silently changed behaviour for existing callers on top of it.
-  The hazard `alpha.1` was reacting to is real — `Double.tryParse "1.5"` is `None` on any
-  comma-decimal locale, and machine-generated text must never depend on the host — but the answer is
-  a second name the caller chooses, not a redefinition of the first
-- The integer modules, `Boolean`, `Guid`, `Char`, `Version` and `Enum` get no `Inv` variant: nothing a
-  locale redefines reaches them, so a second name would be noise
-
-### Migration from alpha.1
-- Anything parsing machine-generated text — a database column, a JSON number, a protocol field, a
-  config value — should read `tryParseInv` where it currently reads `tryParse`. That is what `alpha.1`
-  silently did for you; now it is written at the call site
-- Anything parsing what a person typed in their own locale keeps `tryParse` and is now correct again
-
-### Tests
-- The culture contract is locked in both directions: one test forces `ru-RU` and asserts `tryParseInv`
-  is unmoved by it, a second forces the same culture and asserts `tryParse` does follow it — reading
-  `"1,5"` as one-and-a-half and refusing `"1.5"`. 557 tests to 558
-
-## 1.5.0-alpha.1
-
-Pre-release: the culture change below alters what existing float and date parsers accept, so it wants
-use against real data before a stable `1.5.0`.
+Fills out the parsing surface and settles a culture question `1.4.1` left open.
 
 ### Added
 - `tryParseV` returning `ValueOption` beside every `tryParse` — the parity the library already keeps
   between `Tasks/TaskOption.fs` and `Tasks/TaskVOption.fs`, which the parsers were the last place to
-  be missing. `tryParse` remains the one to reach for: it composes with `List.choose`, `Option.map`
-  and the rest of FSharp.Core, and `tryParseV` only pays off where the value stays out of them
+  be missing. `tryParse` stays the default: it composes with `List.choose`, `Option.map` and the rest
+  of FSharp.Core, and `tryParseV` only pays off where the value stays out of them — a hot loop parsing
+  millions of fields
 - Parsers for the types that had none: `SByte`, `UInt16`, `UInt32`, `UInt64`, `DateTime`, `TimeSpan`
 - `Char.tryParse` / `Char.tryParseV` — a string of any length but one is a failure, not a truncation
 - `Version.tryParse` / `Version.tryParseV`
 - `Enum.tryParse` / `tryParseIgnoreCase` / `tryParseV` / `tryParseVIgnoreCase`, generic over the enum
-- Tests for the parsing modules, which had none at all: 517 tests to 557
-
-### Changed
-- **Floating point and dates now parse against the invariant culture rather than the ambient one.**
-  `Double.tryParse "1.5"` returned `None` on every locale whose decimal separator is a comma — ru-RU,
-  de-DE, fr-FR, most of Europe — because the ambient culture decided what a decimal point meant. The
-  text these functions actually receive is machine-generated (a database column, a JSON number, a
-  protocol field, a config value) and is invariant by construction, so the ambient culture was never
-  the right question to ask of it. Affects `Single`, `Double`, `Decimal`, `DateTimeOffset` and the new
-  `DateTime` and `TimeSpan`
-- Group separators are no longer accepted in floating point: `Double.tryParse "1,234.5"` is now
-  `None` where it used to be `Some 1234.5` on an English locale. This is the deliberate half of the
-  change above — under the invariant culture the comma *is* the group separator, so permitting it read
-  `"1,5"` as `15.0`, ten times the intended value and silently. A rejected parse the caller can see
-  beats a plausible wrong number
-- `Core/Options.fs` now compiles ahead of `Core/Char.fs` instead of after `Core/String.fs`, so the
-  `Option`/`ValueOption` TryXxx adapters are in scope for every parser that builds on them. It depends
-  on nothing but `Core/Operators.fs`
+- `tryParseInv` / `tryParseInvV` on the six culture-sensitive modules — `Single`, `Double`, `Decimal`,
+  `DateTime`, `DateTimeOffset`, `TimeSpan`. Text that came from a machine — a database column, a JSON
+  number, a protocol field, a config value — is invariant by construction, and parsing it with
+  `tryParse` makes the result depend on the host: `Double.tryParse "1.5"` is `None` on every locale
+  whose decimal separator is a comma, which is most of Europe. `tryParseInv` pins
+  `CultureInfo.InvariantCulture` so that text reads the same regardless of where the process runs.
+  The naming follows the distinction this library already draws in `Char.toUpper`/`toUpperInv` and
+  `String.toLower`/`toLowerInv`: the plain name follows the ambient culture, the `Inv` suffix pins the
+  invariant one. `tryParse` is unchanged from `1.4.1` and is still the right call for text a person
+  typed in their own locale, where the ambient culture is the question actually being asked
+- The `Inv` numeric parsers (`Single`, `Double`, `Decimal`) explicitly request `NumberStyles.Float`
+  and so refuse group separators, even though the ambient `tryParse` overloads accept them by BCL
+  default. Under the invariant culture the group separator is a comma, so allowing it would read
+  `"1,5"` as `15.0` — ten times the intended value, and silently. Machine-generated text never
+  legitimately carries a group separator, so refusing it costs nothing and removes the corruption
 
 ### Not added, and why
 - `DateOnly`, `TimeOnly`, `Int128`, `UInt128` and `Half` have no parser: the package targets
@@ -70,6 +34,12 @@ use against real data before a stable `1.5.0`.
   netstandard2.1 reference assemblies, which reports all five as undefined. `netstandard` has no
   version above 2.1, so the only way to reach them is to target .NET directly, which this package
   deliberately does not do
+
+### Tests
+- The parsing modules had no tests at all before this release; they now do, including a two-way
+  culture-contract check — one test forces `ru-RU` and asserts `tryParseInv` is unmoved by it, a
+  second forces the same culture and asserts `tryParse` does follow it, reading `"1,5"` as
+  one-and-a-half and refusing `"1.5"`. 517 tests to 558
 
 ## 1.4.1
 
