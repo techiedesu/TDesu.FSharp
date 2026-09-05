@@ -31,7 +31,13 @@ type TaskTests() =
         let total =
             Task.loop
                 (fun (i, acc) ->
-                    Task.FromResult(if i = 1_000_000 then Loop.Stop acc else Loop.Continue(i + 1, acc + int64 i)))
+                    Task.FromResult(
+                        if i = 1_000_000 then
+                            Loop.Stop acc
+                        else
+                            Loop.Continue(i + 1, acc + int64 i)
+                    )
+                )
                 (0, 0L)
             |> Task.getResult
 
@@ -44,8 +50,14 @@ type TaskTests() =
                 (fun (n: int, acc: string list) ->
                     task {
                         do! Task.Yield()
-                        return if n = 0 then Loop.Stop(List.rev acc) else Loop.Continue(n - 1, string n :: acc)
-                    })
+
+                        return
+                            if n = 0 then
+                                Loop.Stop(List.rev acc)
+                            else
+                                Loop.Continue(n - 1, string n :: acc)
+                    }
+                )
                 (3, [])
             |> Task.getResult
 
@@ -60,9 +72,13 @@ type TaskTests() =
                 (fun (n: int) ->
                     task {
                         steps <- steps + 1
-                        if n = 2 then failwith "boom"
+
+                        if n = 2 then
+                            failwith "boom"
+
                         return Loop.Continue(n + 1)
-                    })
+                    }
+                )
                 0
 
         let ex = Assert.Throws<System.AggregateException>(fun () -> t.Wait())
