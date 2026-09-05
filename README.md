@@ -188,6 +188,15 @@ Task.fireAndForget (fun ex -> log.Error(ex)) (fun () -> sendEmail())
 
 // Throttled parallelism
 Task.parallelThrottle 5 urls (fun url -> httpClient.GetAsync(url))
+
+// A loop instead of a recursive task: `return! step next` is not a tail call and keeps one
+// state machine per iteration alive; Task.loop runs the step from one while
+let receiveAll (transport: ITransport) ct =
+    Task.loop (fun received -> task {
+        match! transport.ReceiveAsync ct with
+        | Ok frame -> handle frame; return Loop.Continue (received + 1)
+        | Error _ -> return Loop.Stop received
+    }) 0
 ```
 
 ### TaskResult

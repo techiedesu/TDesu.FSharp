@@ -1,3 +1,29 @@
+## 2.0.0
+
+A loop for `task { }` code that used to be written as recursion, and eight `Result` functions
+handed back to FSharp.Core. The removals are the reason for the major number: nothing that calls
+them changes, but the library's own policy counts a removal as breaking, and a 2.0 says so.
+
+### Added
+- `Task.loop` and the `Loop<'State, 'Result>` union it returns (`Loop.Continue state` /
+  `Loop.Stop result`). `return! step next` inside a `task { }` is not a tail call: the builder awaits
+  the inner task, so every activation stays registered as the continuation of the one after it. A
+  receive loop written that way was measured retaining 568 bytes per iteration until its connection
+  dropped — one state-machine box per frame, independent of frame size — and overflowing a 1 MB
+  thread-pool stack between 1,000 and 1,500 iterations once the awaited reads completed
+  synchronously, which a socket read does whenever the data is already buffered. `Task.loop` runs
+  the step from one `while`, so the same code runs in constant heap and stack. The test drives a
+  million synchronous steps; the recursive form did not survive two thousand
+
+### Removed
+- `Result.map`, `bind`, `mapError`, `isOk`, `isError`, `defaultValue`, `defaultWith` and `toOption`.
+  FSharp.Core 9 ships all eight under the same names with the same shapes, and F# resolves
+  `Result.map` across every module of that name in scope, so a caller that opens `TDesu.FSharp`
+  and writes `Result.map` now gets FSharp.Core's — same `inline`, same `InlineIfLambda`. Verified
+  by building every consumer of this package against 2.0.0 without a source change. What stays in
+  `Result` is what FSharp.Core lacks: `get`, `valueOr`, `orElse`, `orElseWith`, `tee`, `teeError`,
+  `ofOption`, `zip`, `ignore`, `requireTrue`, `requireFalse`, `requireNotNull`, `catch`
+
 ## 1.5.0
 
 Fills out the parsing surface and settles a culture question `1.4.1` left open.

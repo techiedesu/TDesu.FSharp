@@ -5,14 +5,25 @@ open System.Threading.Tasks
 open TDesu.FSharp.Operators
 
 /// <summary>
-/// Task combinators — map, bind, zip, catch, and more for <see cref="Task{T}"/>.
+/// What one step of <see cref="M:TDesu.FSharp.Tasks.Task.loop"/> decided: run again with the next
+/// state, or stop and hand back the result.
+/// </summary>
+/// <namespacedoc>
+///   <summary>Task and TaskResult combinators, Task.loop, TaskGroup (structured concurrency), parallelThrottle, fireAndForget.</summary>
+/// </namespacedoc>
+[<Struct; RequireQualifiedAccess>]
+type Loop<'State, 'Result> =
+    /// Run the step again with this state.
+    | Continue of state: 'State
+    /// The loop is over; this is its result.
+    | Stop of result: 'Result
+
+/// <summary>
+/// Task combinators — map, bind, zip, catch, loop, and more for <see cref="Task{T}"/>.
 /// </summary>
 /// <remarks>
 /// All functions are <c>inline</c> for zero-overhead abstractions. Thread-safe by design.
 /// </remarks>
-/// <namespacedoc>
-///   <summary>Task and TaskResult combinators, TaskGroup (structured concurrency), parallelThrottle, fireAndForget.</summary>
-/// </namespacedoc>
 module Task =
     /// Converts a non-generic Task to Task&lt;unit&gt;.
     /// <param name="t">The non-generic task to convert.</param>
@@ -239,4 +250,50 @@ module Task =
                 met <- condition ()
 
             return met
+        }
+
+    /// <summary>
+    /// Runs <paramref name="step"/> again and again, threading a state through, until it answers
+    /// <see cref="Loop{TState,TResult}.Stop"/>. This is how to write a recursive <c>task { }</c>
+    /// without recursion: a loop whose body is an ordinary task-returning function.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>return! step next</c> inside a <c>task { }</c> is not a tail call. The builder awaits the
+    /// inner task, so every activation stays registered as the continuation of the one after it:
+    /// a loop written that way keeps one state machine per iteration alive until it ends
+    /// (measured on a socket read loop: 568 bytes per iteration, released only when the
+    /// connection dropped) and, when the awaited operations complete synchronously, nests real
+    /// stack frames — a 1 MB thread-pool stack overflowed between 1,000 and 1,500 iterations.
+    /// </para>
+    /// <para>
+    /// Here each <paramref name="step"/> call is its own task, awaited from one <c>while</c>, so
+    /// the loop runs in constant heap and constant stack however long it lives. Exceptions from a
+    /// step end the loop and fault the returned task; cancellation is the step's business — make it
+    /// answer <c>Stop</c> or throw.
+    /// </para>
+    /// </remarks>
+    /// <param name="step">One iteration: takes the current state and decides whether to continue with a new one or stop with the result.</param>
+    /// <param name="state">The state handed to the first step.</param>
+    /// <example>
+    /// <code>
+    /// let receiveLoop (transport: ITransport) =
+    ///     Task.loop (fun () -> task {
+    ///         match! transport.ReceiveAsync ct with
+    ///         | Ok frame -> handle frame; return Loop.Continue ()
+    ///         | Error e -> return Loop.Stop e
+    ///     }) ()
+    /// </code>
+    /// </example>
+    let loop (step: 'State -> Task<Loop<'State, 'Result>>) (state: 'State) : Task<'Result> =
+        task {
+            let mutable current = state
+            let mutable result = ValueNone
+
+            while result.IsNone do
+                match! step current with
+                | Loop.Continue next -> current <- next
+                | Loop.Stop r -> result <- ValueSome r
+
+            return result.Value
         }

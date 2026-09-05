@@ -178,6 +178,12 @@ module Option =
         | Some a, Some b, Some c -> Some(f a b c)
         | _ -> None
 
+/// <summary>
+/// What FSharp.Core's <c>Result</c> module does not have. <c>map</c>, <c>bind</c>, <c>mapError</c>,
+/// <c>isOk</c>, <c>isError</c>, <c>defaultValue</c>, <c>defaultWith</c> and <c>toOption</c> lived
+/// here too until 1.6.0; FSharp.Core 9 ships all of them with the same names and shapes, and F#
+/// resolves <c>Result.map</c> across every module of that name in scope, so callers did not change.
+/// </summary>
 [<RequireQualifiedAccess>]
 module Result =
     /// <summary>
@@ -190,61 +196,12 @@ module Result =
         | Error err -> invalidOpf "Result contained Error: %O" err
         | Ok r -> r
 
-    /// Transforms the Ok value with f, passing Error through unchanged.
-    /// <param name="f">The mapping function to apply to the Ok value.</param>
-    let inline map ([<InlineIfLambda>] f) =
-        function
-        | Ok v -> Ok(f v)
-        | Error e -> Error e
-
-    /// Chains a Result-returning function on Ok; short-circuits on Error.
-    /// <param name="f">The function returning a new Result.</param>
-    let inline bind ([<InlineIfLambda>] f) =
-        function
-        | Ok v -> f v
-        | Error e -> Error e
-
-    /// Transforms the Error value with f, passing Ok through unchanged.
-    /// <param name="f">The mapping function to apply to the Error value.</param>
-    let inline mapError ([<InlineIfLambda>] f) =
-        function
-        | Ok v -> Ok v
-        | Error e -> Error(f e)
-
-    /// Returns true if the result is Ok.
-    /// <param name="r">The result to check.</param>
-    let inline isOk (r: Result<_, _>) =
-        match r with
-        | Ok _ -> true
-        | Error _ -> false
-
-    /// Returns true if the result is Error.
-    /// <param name="r">The result to check.</param>
-    let inline isError (r: Result<_, _>) =
-        match r with
-        | Ok _ -> false
-        | Error _ -> true
-
     /// Extracts the Ok value, or computes a fallback from the Error.
     /// <param name="f">The function to compute a fallback from the Error value.</param>
     let inline valueOr ([<InlineIfLambda>] f: 'TError -> 'T) =
         function
         | Ok v -> v
         | Error e -> f e
-
-    /// Returns the Ok value, or the given default.
-    /// <param name="def">The default value to return on Error.</param>
-    let inline defaultValue (def: 'T) =
-        function
-        | Ok v -> v
-        | Error _ -> def
-
-    /// Returns the Ok value, or computes a default.
-    /// <param name="f">The function to compute a default value on Error.</param>
-    let inline defaultWith ([<InlineIfLambda>] f: unit -> 'T) =
-        function
-        | Ok v -> v
-        | Error _ -> f ()
 
     /// Returns the result if Ok, otherwise the given fallback result.
     /// <param name="ifError">The fallback result to use on Error.</param>
@@ -287,13 +244,6 @@ module Result =
         match opt with
         | Some v -> Ok v
         | None -> Error error
-
-    /// Converts Result to Option: Ok becomes Some, Error becomes None.
-    /// <param name="r">The result to convert.</param>
-    let inline toOption (r: Result<'T, _>) =
-        match r with
-        | Ok v -> Some v
-        | Error _ -> None
 
     /// <summary>
     /// Combines two results into a tuple. Returns the first <c>Error</c> if any.
