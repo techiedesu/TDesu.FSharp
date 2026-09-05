@@ -245,6 +245,44 @@ type PeriodicTimerRunTests() =
         }
 
     [<Test>]
+    member _.``a cancellation that is not the loop's own is reported and paused on, not spun on``() =
+        task {
+            // ARRANGE
+            use cts = new CancellationTokenSource()
+            let errors = ResizeArray<exn>()
+            let mutable count = 0
+
+            // An inner deadline: cancelled by a token the loop knows nothing about.
+            let step () =
+                task {
+                    count <- count + 1
+
+                    if count >= 3 then
+                        cts.Cancel()
+
+                    raise (OperationCanceledException "inner deadline")
+                    return TimeSpan.Zero
+                }
+
+            // ACT
+            let _ =
+                PeriodicTimer.run
+                    step
+                    cts.Token
+                    (fun ex ->
+                        errors.Add ex
+                        TimeSpan.FromMilliseconds 50.
+                    )
+
+            let! reached = Task.waitUntil (TimeSpan.FromSeconds 2.) (fun () -> count >= 3)
+
+            // ASSERT
+            isTrue reached
+            // Every foreign cancellation reached onError; the loop's own, on the third step, did not.
+            equals errors.Count 2
+        }
+
+    [<Test>]
     member _.``cancelling the token stops the loop and completes the returned task``() =
         task {
             // ARRANGE

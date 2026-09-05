@@ -15,7 +15,10 @@ messages just to read back the case it was already routing on.
 - `PeriodicTimer.run` -- a loop whose own step decides the pause before the next run, for loops that
   need to tighten up when busy and back off when idle instead of ticking on a fixed `interval`.
   `step: unit -> Task<TimeSpan>` returns that pause directly; a throwing step's pause comes from
-  `onError: exn -> TimeSpan` instead of a fixed retry cadence
+  `onError: exn -> TimeSpan` instead of a fixed retry cadence. In both loops only a cancellation
+  that is `ct`'s own ends the loop quietly: an `OperationCanceledException` raised for any other
+  reason — an inner deadline, a foreign token — is reported like any failure and waited out, so a
+  step that keeps being cancelled is paused between attempts rather than spun on
 - `ChannelWorker.startBounded` and `ChannelWorker.BoundedHandle<'T>` -- a
   `System.Threading.Channels`-backed counterpart to `start`/`Handle<'T>`, for a producer that must
   not be left to outrun its handler by growing an unbounded queue underneath it. `TryPost` keeps the

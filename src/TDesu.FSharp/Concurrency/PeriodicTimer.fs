@@ -68,11 +68,14 @@ module PeriodicTimer =
         t :> Task
 
     /// Runs action at once, then again interval after each run ends, until ct fires.
-    /// A run that throws is reported to onError and the next run still happens.
+    /// A run that throws is reported to onError and the next run still happens. Only a
+    /// cancellation that is ct's own ends the loop quietly; an OperationCanceledException
+    /// raised for any other reason — an inner deadline, a foreign token — is a failure like
+    /// any other, so it is reported and waited out rather than spun on.
     /// <param name="interval">The delay after each run ends, before the next one starts.</param>
     /// <param name="action">The async action to execute on each run.</param>
     /// <param name="ct">The cancellation token to stop the loop.</param>
-    /// <param name="onError">Handler invoked when a run throws a non-cancellation exception. The next run still happens.</param>
+    /// <param name="onError">Handler invoked when a run throws. The next run still happens.</param>
     let startImmediate
         (interval: TimeSpan)
         (action: unit -> Task<unit>)
@@ -85,7 +88,7 @@ module PeriodicTimer =
                     try
                         do! action ()
                     with
-                    | :? OperationCanceledException -> ()
+                    | :? OperationCanceledException when ct.IsCancellationRequested -> ()
                     | ex ->
                         try
                             onError ex
@@ -101,10 +104,14 @@ module PeriodicTimer =
         t :> Task
 
     /// Runs step at once and again after the pause it answers with, until ct fires.
-    /// A step that throws is reported to onError, whose answer is the pause before the next attempt.
+    /// A step that throws is reported to onError, whose answer is the pause before the next
+    /// attempt. Only a cancellation that is ct's own ends the loop quietly; an
+    /// OperationCanceledException raised for any other reason — an inner deadline, a foreign
+    /// token — goes to onError like any other failure, so a step that keeps being cancelled
+    /// is paused between attempts rather than spun on.
     /// <param name="step">The async step to execute; its result is the pause before the next run.</param>
     /// <param name="ct">The cancellation token to stop the loop.</param>
-    /// <param name="onError">Handler invoked when a step throws a non-cancellation exception; its return value is the pause before the next attempt.</param>
+    /// <param name="onError">Handler invoked when a step throws; its return value is the pause before the next attempt.</param>
     let run (step: unit -> Task<TimeSpan>) (ct: Threading.CancellationToken) (onError: exn -> TimeSpan) : Task =
         let t =
             task {
@@ -113,7 +120,7 @@ module PeriodicTimer =
                         let! pause = step ()
                         do! Task.Delay(pause, ct)
                     with
-                    | :? OperationCanceledException -> ()
+                    | :? OperationCanceledException when ct.IsCancellationRequested -> ()
                     | ex ->
                         try
                             do! Task.Delay(onError ex, ct)
