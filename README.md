@@ -86,6 +86,20 @@ Enum.removeFlag Permissions.Write perms         // Read
 Enum.addFlagWhen true Permissions.Execute perms // adds only when the condition holds
 ```
 
+### Union
+
+```fsharp
+open TDesu.FSharp
+
+type Status =
+    | Active
+    | Suspended of reason: string
+
+Union.caseName Active                // "Active"
+Union.caseName (Suspended "abuse")   // "Suspended"
+Union.caseNames<Status> ()           // [| "Active"; "Suspended" |]
+```
+
 ### String
 
 ```fsharp
@@ -371,9 +385,26 @@ PeriodicTimer.start (TimeSpan.FromSeconds 60.0) (fun () -> task {
     log.Info("tick")
 }) ct onError
 
+// Same, but the first run happens immediately instead of waiting out the first interval
+PeriodicTimer.startImmediate (TimeSpan.FromSeconds 60.0) (fun () -> task {
+    log.Info("tick")
+}) ct onError
+
+// A loop that picks its own pause each run -- tighten up when busy, back off on failure
+PeriodicTimer.run (fun () -> task {
+    let! backlog = pollQueueDepth ()
+    return (if backlog > 0 then TimeSpan.Zero else TimeSpan.FromSeconds 5.0)
+}) ct (fun _ -> TimeSpan.FromSeconds 30.0)
+
 // Sequential background worker
 let worker = ChannelWorker.start processItem onError ct
 worker.Post(item)
+
+// Same, but backed by a bounded queue -- a producer that outruns the handler waits for room
+let bounded = ChannelWorker.startBounded 1000 processItem onError ct
+bounded.TryPost(item) |> ignore   // false instead of blocking when the queue is full
+do! bounded.PostAsync(item, ct)   // waits for room instead
+bounded.Complete()                // let what's already queued finish, then stop
 
 // Rate limiting
 let limiter = SlidingWindowLimiter(100, TimeSpan.FromMinutes 1.0)

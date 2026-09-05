@@ -37,6 +37,7 @@
         <Compile Include="Core\String.fs" />
         <Compile Include="Core\NumericParsing.fs" />
         <Compile Include="Core\Numerics.fs" />
+        <Compile Include="Core\Union.fs" />
         <Compile Include="Collections\Dictionary.fs" />
         <Compile Include="Collections\Stack.fs" />
         <Compile Include="Collections\Seq.fs" />
@@ -85,6 +86,7 @@
 
     <ItemGroup>
         <PackageReference Include="FSharp.Core" />
+        <PackageReference Include="System.Threading.Channels" />
         <PackageReference Include="MinVer" PrivateAssets="all" />
         <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" />
     </ItemGroup>

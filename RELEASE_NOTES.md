@@ -1,3 +1,42 @@
+## 2.1.0
+
+Three additions to `Concurrency` and a new `Union` module, each replacing a pattern a consumer had
+been hand-rolling: sixteen background loops sharing the same `while`/`try`/`Task.Delay`/`with _ ->
+()` shape whose first pass has to run at startup rather than after the first wait, a bounded update
+queue built around a raw `SemaphoreSlim` with both a drop-and-report post and a wait-for-room post,
+and an uncached `FSharpValue.GetUnionFields` call on every one of a high-volume stream of routed
+messages just to read back the case it was already routing on.
+
+### Added
+- `PeriodicTimer.startImmediate` -- like `start`, but the first run happens immediately instead of
+  waiting out the first interval. Cancellation and error handling are unchanged: a throwing run is
+  reported to `onError` and the loop keeps going, and the returned task completes (never faults)
+  once the token fires
+- `PeriodicTimer.run` -- a loop whose own step decides the pause before the next run, for loops that
+  need to tighten up when busy and back off when idle instead of ticking on a fixed `interval`.
+  `step: unit -> Task<TimeSpan>` returns that pause directly; a throwing step's pause comes from
+  `onError: exn -> TimeSpan` instead of a fixed retry cadence
+- `ChannelWorker.startBounded` and `ChannelWorker.BoundedHandle<'T>` -- a
+  `System.Threading.Channels`-backed counterpart to `start`/`Handle<'T>`, for a producer that must
+  not be left to outrun its handler by growing an unbounded queue underneath it. `TryPost` keeps the
+  never-blocks, false-when-full contract the hand-rolled version had; `PostAsync` is the
+  wait-for-room half it did not have. Cancelling the worker's token is still the abandon-the-queue
+  shutdown `start` has always had; `BoundedHandle.Complete()` is the new, graceful one -- it refuses
+  further posts but lets everything already queued finish, and `Completion` completes only once that
+  drain does
+- `Union.caseName` / `Union.caseNames` -- the case name a union value was built with, and every case
+  name of a union type in declaration order. Reading the case name back out of
+  `FSharpValue.GetUnionFields` on every message of a routed stream repeats the same reflection
+  lookup every time; `caseName` reads the tag through a `FSharpValue.PreComputeUnionTagReader`
+  compiled once per union type and cached from then on. Raises `ArgumentException` for a type that
+  is not an F# union
+
+### Tests
+- 561 tests to 578: cancellation and error-recovery coverage for `startImmediate` and `run` matching
+  the existing `start`/`startCounted` suite, `startBounded` coverage for back pressure, ordering,
+  error recovery and both shutdown paths, and `Union` coverage for a multi-case union with and
+  without fields, case-name order, and the non-union `ArgumentException`
+
 ## 2.0.0
 
 A loop for `task { }` code that used to be written as recursion, and eight `Result` functions

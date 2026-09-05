@@ -66,3 +66,59 @@ module PeriodicTimer =
             }
 
         t :> Task
+
+    /// Runs action at once, then again interval after each run ends, until ct fires.
+    /// A run that throws is reported to onError and the next run still happens.
+    /// <param name="interval">The delay after each run ends, before the next one starts.</param>
+    /// <param name="action">The async action to execute on each run.</param>
+    /// <param name="ct">The cancellation token to stop the loop.</param>
+    /// <param name="onError">Handler invoked when a run throws a non-cancellation exception. The next run still happens.</param>
+    let startImmediate
+        (interval: TimeSpan)
+        (action: unit -> Task<unit>)
+        (ct: Threading.CancellationToken)
+        (onError: exn -> unit)
+        : Task =
+        let t =
+            task {
+                while not ct.IsCancellationRequested do
+                    try
+                        do! action ()
+                    with
+                    | :? OperationCanceledException -> ()
+                    | ex ->
+                        try
+                            onError ex
+                        with _ ->
+                            ()
+
+                    try
+                        do! Task.Delay(interval, ct)
+                    with :? OperationCanceledException ->
+                        ()
+            }
+
+        t :> Task
+
+    /// Runs step at once and again after the pause it answers with, until ct fires.
+    /// A step that throws is reported to onError, whose answer is the pause before the next attempt.
+    /// <param name="step">The async step to execute; its result is the pause before the next run.</param>
+    /// <param name="ct">The cancellation token to stop the loop.</param>
+    /// <param name="onError">Handler invoked when a step throws a non-cancellation exception; its return value is the pause before the next attempt.</param>
+    let run (step: unit -> Task<TimeSpan>) (ct: Threading.CancellationToken) (onError: exn -> TimeSpan) : Task =
+        let t =
+            task {
+                while not ct.IsCancellationRequested do
+                    try
+                        let! pause = step ()
+                        do! Task.Delay(pause, ct)
+                    with
+                    | :? OperationCanceledException -> ()
+                    | ex ->
+                        try
+                            do! Task.Delay(onError ex, ct)
+                        with _ ->
+                            ()
+            }
+
+        t :> Task
