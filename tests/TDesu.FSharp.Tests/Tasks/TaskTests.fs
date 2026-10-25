@@ -84,3 +84,74 @@ type TaskTests() =
         let ex = Assert.Throws<System.AggregateException>(fun () -> t.Wait())
         equals ex.InnerException.Message "boom"
         equals steps 3
+
+    // map/bind/ignore short-circuit an input that already completed successfully. That path
+    // must report a throwing mapper exactly like the task builder does — faulted for an
+    // ordinary exception, cancelled for an OperationCanceledException, and never a
+    // synchronous throw at the call site.
+    [<Test>]
+    member _.``map and bind keep the builder's fault and cancel contract on a completed input``() =
+        let completed = Task.FromResult 42
+        let token = System.Threading.CancellationToken(true)
+
+        let statusOf (t: Task<int>) =
+            try
+                t.Wait()
+            with :? System.AggregateException ->
+                ()
+
+            t.Status
+
+        equals (Task.map (fun v -> v + 1) completed |> Task.getResult) 43
+        equals (Task.bind (fun v -> Task.FromResult(v + 1)) completed |> Task.getResult) 43
+
+        equals (statusOf (Task.map (fun _ -> failwith "boom") completed)) TaskStatus.Faulted
+        equals (statusOf (Task.bind (fun _ -> failwith "boom") completed)) TaskStatus.Faulted
+
+        equals
+            (statusOf (Task.map (fun _ -> raise (System.OperationCanceledException token)) completed))
+            TaskStatus.Canceled
+
+        equals
+            (statusOf (Task.bind (fun _ -> raise (System.OperationCanceledException token)) completed))
+            TaskStatus.Canceled
+
+        // An OperationCanceledException carrying no cancelled token still has to cancel rather
+        // than throw out of the combinator — Task.FromCanceled would reject that token.
+        equals
+            (statusOf (Task.map (fun _ -> raise (System.OperationCanceledException())) completed))
+            TaskStatus.Canceled
+
+        equals
+            (statusOf (Task.map id (Task.FromException<int>(System.InvalidOperationException "x"))))
+            TaskStatus.Faulted
+
+        equals (statusOf (Task.map id (Task.FromCanceled<int> token))) TaskStatus.Canceled
+
+    [<Test>]
+    member _.``map and bind still await an input that completes later``() =
+        let source =
+            TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously)
+
+        let mapped = Task.map (fun v -> v + 1) source.Task
+        let bound = Task.bind (fun v -> Task.FromResult(v * 2)) source.Task
+        let ignored = Task.ignore source.Task
+
+        equals mapped.IsCompleted false
+        source.SetResult 20
+
+        equals (Task.getResult mapped) 21
+        equals (Task.getResult bound) 40
+        equals (Task.getResult ignored) ()
+
+    [<Test>]
+    member _.``ignore propagates a failed input instead of completing``() =
+        let faulted = Task.FromException<int>(System.InvalidOperationException "x")
+        let t = Task.ignore faulted
+
+        try
+            t.Wait()
+        with :? System.AggregateException ->
+            ()
+
+        equals t.Status TaskStatus.Faulted

@@ -1,3 +1,19 @@
+## 2.1.1
+
+### Changed
+- `Task.map`, `Task.bind` and `Task.ignore` return without starting a state machine when their
+  input task has already completed successfully — the usual case in a request pipeline, where the
+  awaited work is a cache hit or a buffered read. Measured against the `task { let! v = t in
+  return f v }` shape they replace (BenchmarkDotNet, ShortRun, in-process, .NET 10, i9-12900K):
+  `map` 27.9 ns → 3.26 ns, `bind` → 3.50 ns, `ignore` → 0.19 ns and no allocation at all. A task
+  that completes later still goes through the builder and measures the same as before.
+
+  The shortcut keeps the builder's contract rather than the obvious `Task.FromResult(f t.Result)`:
+  a mapper that throws yields a faulted task, one that raises `OperationCanceledException` yields a
+  cancelled task (including when the exception carries no cancelled token, which `Task.FromCanceled`
+  rejects), and neither ever throws synchronously at the call site. `TaskTests` now pins all of
+  these, and `TaskCombinatorBenchmark` pins the shortcut itself.
+
 ## 2.1.0
 
 Three additions to `Concurrency` and a new `Union` module, each replacing a pattern a consumer had

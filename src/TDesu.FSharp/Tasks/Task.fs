@@ -162,19 +162,45 @@ module Task =
     /// <param name="f">The mapping function.</param>
     /// <param name="t">The input task.</param>
     let inline map ([<InlineIfLambda>] f: 'T -> 'TResult) (t: Task<'T>) : Task<'TResult> =
-        task {
-            let! v = t
-            return f v
-        }
+        // Most awaited work in a request pipeline is already finished by the time it is mapped
+        // (a cache hit, a buffered read), and driving the state machine for it costs ~3x what
+        // reading the result does. The builder reports a throwing `f` as a faulted task and an
+        // OperationCanceledException as a cancelled one, never as a synchronous throw — this
+        // path has to answer the same way or callers see a different contract.
+        if t.IsCompletedSuccessfully then
+            try
+                Task.FromResult(f t.Result)
+            with
+            | :? OperationCanceledException as ex ->
+                let source = TaskCompletionSource<'TResult>()
+                source.TrySetCanceled ex.CancellationToken |> ignore
+                source.Task
+            | ex -> Task.FromException<'TResult>(ex)
+        else
+            task {
+                let! v = t
+                return f v
+            }
 
     /// Chains a task-returning function on the result of a task.
     /// <param name="f">The binding function returning a new task.</param>
     /// <param name="t">The input task.</param>
     let inline bind ([<InlineIfLambda>] f: 'T -> Task<'TResult>) (t: Task<'T>) : Task<'TResult> =
-        task {
-            let! v = t
-            return! f v
-        }
+        // Same completed-input shortcut as `map`, with the same fault/cancel contract.
+        if t.IsCompletedSuccessfully then
+            try
+                f t.Result
+            with
+            | :? OperationCanceledException as ex ->
+                let source = TaskCompletionSource<'TResult>()
+                source.TrySetCanceled ex.CancellationToken |> ignore
+                source.Task
+            | ex -> Task.FromException<'TResult>(ex)
+        else
+            task {
+                let! v = t
+                return! f v
+            }
 
     /// Wraps a value in a completed task.
     /// <param name="v">The value to wrap.</param>
@@ -183,10 +209,13 @@ module Task =
     /// Discards the task result, returning Task&lt;unit&gt;.
     /// <param name="t">The task whose result to discard.</param>
     let inline ignore (t: Task<_>) : Task<unit> =
-        task {
-            let! _ = t
-            return ()
-        }
+        if t.IsCompletedSuccessfully then
+            Task.FromResult()
+        else
+            task {
+                let! _ = t
+                return ()
+            }
 
     /// Combines two tasks into a tuple, running them concurrently.
     /// <param name="t1">The first task.</param>
