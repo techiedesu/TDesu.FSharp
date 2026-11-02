@@ -215,6 +215,73 @@ type MemoizeTests() =
         equals callCount 1
 
     [<Test>]
+    member _.``createAsync runs f once for concurrent misses on one key``() =
+        task {
+            let mutable callCount = 0
+            let release = TaskCompletionSource<int>()
+
+            let cached =
+                Memoize.createAsync (fun (_: int) ->
+                    Interlocked.Increment(&callCount) |> ignore
+                    release.Task
+                )
+
+            let callers = [ for _ in 1..3 -> cached 5 ]
+            release.SetResult 10
+            let! values = Task.WhenAll callers
+
+            equals values [| 10; 10; 10 |]
+            equals callCount 1
+        }
+
+    [<Test>]
+    member _.``createAsync does not cache a failure``() =
+        task {
+            let mutable callCount = 0
+
+            let cached =
+                Memoize.createAsync (fun (k: int) ->
+                    task {
+                        callCount <- callCount + 1
+
+                        if callCount = 1 then
+                            failwith "transient"
+
+                        return k * 2
+                    }
+                )
+
+            let! first = Task.catch (cached 5)
+            let! second = cached 5
+
+            equals (Result.isError first) true
+            equals second 10
+            equals callCount 2
+        }
+
+    [<Test>]
+    member _.``withTtlAsync runs f once for concurrent misses on one key``() =
+        task {
+            let mutable callCount = 0
+            let release = TaskCompletionSource<int>()
+
+            let cached =
+                Memoize.withTtlAsync
+                    (TimeSpan.FromMinutes 1.)
+                    (fun (_: int) ->
+                        Interlocked.Increment(&callCount) |> ignore
+                        release.Task
+                    )
+
+            let callers = [ for _ in 1..3 -> cached 5 ]
+            release.SetResult 10
+            let! values = Task.WhenAll callers
+
+            equals values [| 10; 10; 10 |]
+            equals callCount 1
+        }
+
+    [<Test>]
     member _.``withTtl expires after TTL``() =
         task {
             let mutable callCount = 0

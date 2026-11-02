@@ -44,7 +44,7 @@ let result = taskResult {
 | `TDesu.FSharp.Builders` | Computation expressions: `result {}`, `option {}`, `taskResult {}` |
 | `TDesu.FSharp.Tasks` | Task/TaskResult combinators, TaskGroup, parallelThrottle, fireAndForget |
 | `TDesu.FSharp.Collections` | Dictionary, ResizeArray, Seq, List, Stack extensions |
-| `TDesu.FSharp.Concurrency` | AtomicInt/Int64, BoundedDict, BoundedQueue, Signal, PeriodicTimer, ChannelWorker, SlidingWindowLimiter |
+| `TDesu.FSharp.Concurrency` | AtomicInt/Int64, BoundedDict, BoundedQueue, Signal, PeriodicTimer, ChannelWorker, SingleFlight, SlidingWindowLimiter |
 | `TDesu.FSharp.Resilience` | Retry, CircuitBreaker, Timeout, Memoize, Saga |
 | `TDesu.FSharp.IO` | Env, File, Directory, Disposable, TemporaryFileStream, Stream |
 | `TDesu.FSharp.Buffers` | Bytes (xor, concat, constantTimeEquals), ArrayPool, ValueStringBuilder |

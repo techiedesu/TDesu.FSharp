@@ -411,6 +411,10 @@ let limiter = SlidingWindowLimiter(100, TimeSpan.FromMinutes 1.0)
 match limiter.TryAcquire() with
 | Ok () -> processRequest()
 | Error waitTime -> return TooManyRequests waitTime
+
+// One run per key at a time: concurrent callers for a key share the run in progress
+let connections = SingleFlight<int, Connection>()
+let! conn = connections.Run(dcId, fun () -> openConnection dcId)
 ```
 
 ### Resilience
@@ -430,7 +434,7 @@ let! data = breaker (fun () -> callExternalApi())
 let! data = Timeout.afterLinked (TimeSpan.FromSeconds 10.0) ct (fun ct ->
     slowOperation ct)
 
-// Memoize with TTL
+// Memoize with TTL -- concurrent misses on one key share a single fetch
 let cachedFetch = Memoize.withTtlAsync (TimeSpan.FromMinutes 5.0) fetchExpensiveData
 
 // Saga (transactional orchestration with compensation)

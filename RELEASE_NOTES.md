@@ -1,3 +1,22 @@
+## 2.2.0
+
+### Added
+- `Concurrency.SingleFlight<'TKey, 'TValue>`: one run per key at a time. A call for a key whose
+  work is already running joins that run and gets the same value, exception or cancellation; once
+  the run completes the key is free and nothing is remembered, so a failure is never replayed.
+  The key is freed before the result is published, so a continuation asking again starts a fresh
+  run. A joiner that wants to stop waiting sooner bounds its own wait with `WaitAsync(ct)`; the run
+  carries on for the others. Written for a consumer whose three download workers each opened their
+  own connection, key exchange and authorization import to the same Telegram data centre at once:
+  one import was accepted and two refused, 60-70 times a day.
+
+### Changed
+- `Memoize.createAsync` and `Memoize.withTtlAsync` run `f` once for concurrent misses on one key.
+  Both used to call `f` once per caller until the first result landed — `createAsync` documented it
+  ("f may execute more than once per key") — so a cold cache under load did the expensive work as
+  many times as there were callers. A failure is still not cached: everyone who shared the failed
+  call sees it, and the next call runs `f` again. Signatures are unchanged.
+
 ## 2.1.1
 
 ### Changed

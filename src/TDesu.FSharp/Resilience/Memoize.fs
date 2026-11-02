@@ -15,6 +15,7 @@ open System.Threading.Tasks
 module Memoize =
 
     open System.Collections.Concurrent
+    open TDesu.FSharp.Concurrency
 
     /// Memoizes a function. Cached forever (or until process restart).
     /// <param name="f">Function whose results are cached by input key.</param>
@@ -23,20 +24,32 @@ module Memoize =
         fun key -> cache.GetOrAdd(key, f)
 
     /// Memoizes an async function. Cached forever.
-    /// Under contention, f may execute more than once per key; only the last result is kept.
+    /// Concurrent calls for a key that is not cached yet share one execution of f
+    /// (<see cref="T:TDesu.FSharp.Concurrency.SingleFlight`2"/>). A failure is not cached: every
+    /// caller that shared the failed execution sees it, and the next call runs f again.
     /// <param name="f">Async function whose results are cached by input key.</param>
     let createAsync (f: 'TKey -> Task<'TValue>) =
         let cache = ConcurrentDictionary<'TKey, 'TValue>()
+        let flights = SingleFlight<'TKey, 'TValue>()
 
         fun key ->
-            task {
-                match cache.TryGetValue key with
-                | true, v -> return v
-                | _ ->
-                    let! v = f key
-                    cache[key] <- v
-                    return v
-            }
+            match cache.TryGetValue key with
+            | true, v -> Task.FromResult v
+            | _ ->
+                flights.Run(
+                    key,
+                    fun () ->
+                        task {
+                            // A run that finished between the miss above and this one already
+                            // filled the cache; asking f again would be the duplicate this prevents.
+                            match cache.TryGetValue key with
+                            | true, v -> return v
+                            | _ ->
+                                let! v = f key
+                                cache[key] <- v
+                                return v
+                        }
+                )
 
     /// Memoizes a function with time-to-live. Expired entries are recomputed.
     /// Stale entries are periodically cleaned up to prevent unbounded memory growth.
@@ -69,33 +82,45 @@ module Memoize =
                 v
 
     /// Memoizes an async function with time-to-live.
+    /// Concurrent calls for a key that is missing or expired share one execution of f, as in
+    /// <see cref="createAsync"/>.
     /// Stale entries are periodically cleaned up to prevent unbounded memory growth.
     /// <param name="ttl">Duration before a cached entry expires.</param>
     /// <param name="f">Async function whose results are cached by input key.</param>
     let withTtlAsync (ttl: TimeSpan) (f: 'TKey -> Task<'TValue>) =
         let cache = ConcurrentDictionary<'TKey, struct ('TValue * int64)>()
+        let flights = SingleFlight<'TKey, 'TValue>()
         let ttlTicks = ttl.Ticks
         let mutable ops = 0L
 
+        let fresh key =
+            match cache.TryGetValue key with
+            | true, struct (v, ts) when DateTime.UtcNow.Ticks - ts < ttlTicks -> ValueSome v
+            | _ -> ValueNone
+
         fun key ->
-            task {
-                let nowTicks = DateTime.UtcNow.Ticks
+            match fresh key with
+            | ValueSome v -> Task.FromResult v
+            | ValueNone ->
+                flights.Run(
+                    key,
+                    fun () ->
+                        task {
+                            match fresh key with
+                            | ValueSome v -> return v
+                            | ValueNone ->
+                                let! v = f key
+                                let nowTicks = DateTime.UtcNow.Ticks
+                                cache[key] <- struct (v, nowTicks)
+                                let n = Interlocked.Increment(&ops)
 
-                match cache.TryGetValue key with
-                | true, struct (v, ts) when nowTicks - ts < ttlTicks -> return v
-                | _ ->
-                    let! v = f key
-                    cache[key] <- struct (v, nowTicks)
-                    let n = Interlocked.Increment(&ops)
+                                if n % 1000L = 0L then
+                                    for kvp in cache do
+                                        let struct (_, ts) = kvp.Value
 
-                    if n % 1000L = 0L then
-                        let cleanupNow = DateTime.UtcNow.Ticks
+                                        if nowTicks - ts >= ttlTicks then
+                                            cache.TryRemove(kvp.Key) |> ignore
 
-                        for kvp in cache do
-                            let struct (_, ts) = kvp.Value
-
-                            if cleanupNow - ts >= ttlTicks then
-                                cache.TryRemove(kvp.Key) |> ignore
-
-                    return v
-            }
+                                return v
+                        }
+                )

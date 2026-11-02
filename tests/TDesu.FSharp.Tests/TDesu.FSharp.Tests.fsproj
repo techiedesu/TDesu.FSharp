@@ -43,6 +43,7 @@
         <Compile Include="Concurrency\ChannelWorkerTests.fs" />
         <Compile Include="Concurrency\RateLimitingTests.fs" />
         <Compile Include="Concurrency\RateLimitingBoundaryTests.fs" />
+        <Compile Include="Concurrency\SingleFlightTests.fs" />
         <Compile Include="Buffers\BuffersTests.fs" />
         <Compile Include="Buffers\ArrayPoolTests.fs" />
         <Compile Include="Buffers\ValueStringBuilderTests.fs" />

@@ -63,6 +63,7 @@
         <Compile Include="Concurrency\SnapshotThrottle.fs" />
         <Compile Include="Concurrency\ChannelWorker.fs" />
         <Compile Include="Concurrency\RateLimiting.fs" />
+        <Compile Include="Concurrency\SingleFlight.fs" />
         <Compile Include="Core\StateMachine.fs" />
         <Compile Include="Buffers\Buffers.fs" />
         <Compile Include="Buffers\ValueStringBuilder.fs" />
