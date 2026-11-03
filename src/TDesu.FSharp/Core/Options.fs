@@ -154,30 +154,6 @@ module Option =
         | Some a, Some b -> Some(a, b)
         | _ -> None
 
-    /// Maps a function over two option values. None if either is None.
-    /// <param name="f">The mapping function.</param>
-    /// <param name="o1">The first option.</param>
-    /// <param name="o2">The second option.</param>
-    let inline map2 ([<InlineIfLambda>] f: 'T1 -> 'T2 -> 'TResult) (o1: 'T1 option) (o2: 'T2 option) =
-        match o1, o2 with
-        | Some a, Some b -> Some(f a b)
-        | _ -> None
-
-    /// Maps a function over three option values. None if any is None.
-    /// <param name="f">The mapping function.</param>
-    /// <param name="o1">The first option.</param>
-    /// <param name="o2">The second option.</param>
-    /// <param name="o3">The third option.</param>
-    let inline map3
-        ([<InlineIfLambda>] f: 'T1 -> 'T2 -> 'T3 -> 'TResult)
-        (o1: 'T1 option)
-        (o2: 'T2 option)
-        (o3: 'T3 option)
-        =
-        match o1, o2, o3 with
-        | Some a, Some b, Some c -> Some(f a b c)
-        | _ -> None
-
 /// <summary>
 /// What FSharp.Core's <c>Result</c> module does not have. <c>map</c>, <c>bind</c>, <c>mapError</c>,
 /// <c>isOk</c>, <c>isError</c>, <c>defaultValue</c>, <c>defaultWith</c> and <c>toOption</c> lived
@@ -273,14 +249,20 @@ module Result =
     /// <param name="value">The boolean condition to check.</param>
     let inline requireFalse (error: 'TError) (value: bool) = if not value then Ok() else Error error
 
-    /// Returns Ok(value) if not null, Error(error) if null.
+    /// <summary>
+    /// Returns <c>Ok(value)</c> if not null, <c>Error(error)</c> if null.
+    /// </summary>
+    /// <remarks>
+    /// Constrained to <c>not struct</c>: a value type can never be null, so checking it against null
+    /// would otherwise box it and compare the fresh box, which is always false — silently never
+    /// failing for a struct <c>'T</c>. An F# <c>option</c> is still a reference type at runtime even
+    /// when the case is <c>None</c> (encoded as a null reference), so this still rejects
+    /// <c>(None: int option)</c> as before.
+    /// </remarks>
     /// <param name="error">The error value to use when the value is null.</param>
     /// <param name="value">The value to check for null.</param>
-    let inline requireNotNull (error: 'TError) (value: 'T) =
-        if obj.ReferenceEquals(value, null) then
-            Error error
-        else
-            Ok value
+    let inline requireNotNull (error: 'TError) (value: 'T when 'T: not struct) =
+        if isNullRef value then Error error else Ok value
 
     /// <summary>
     /// Wraps a function call in try/catch, returning <c>Ok</c> on success or <c>Error(exn)</c> on exception.

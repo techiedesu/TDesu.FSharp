@@ -111,12 +111,13 @@ module Validation =
         | Validation.Error _ -> true
         | _ -> false
 
-    /// Extract the value, throwing if Error.
+    /// Extract the value, throwing if Error. The exception message includes the errors themselves,
+    /// not just their count.
     /// <param name="v">The validation to unwrap.</param>
     let valueOrFail (v: Validation<'TValue, 'TError>) : 'TValue =
         match v with
         | Validation.Ok x -> x
-        | Validation.Error errs -> invalidOp $"Validation failed with {List.length errs} error(s)"
+        | Validation.Error errs -> invalidOp $"Validation failed with {List.length errs} error(s): %A{errs}"
 
     /// Extract the value or use a default.
     /// <param name="defaultValue">The fallback value.</param>

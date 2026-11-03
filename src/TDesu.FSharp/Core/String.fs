@@ -1,5 +1,6 @@
 namespace TDesu.FSharp
 
+open System.Text
 open TDesu.FSharp.Operators
 
 /// <summary>
@@ -8,14 +9,16 @@ open TDesu.FSharp.Operators
 [<RequireQualifiedAccess>]
 module String =
     /// <summary>
-    /// Returns <c>true</c> if the string starts with the given prefix.
+    /// Returns <c>true</c> if the string starts with the given prefix (ordinal).
     /// Null-hardened: returns <c>false</c> if either <paramref name="str"/> or <paramref name="value"/> is
     /// <c>null</c>, per the "null string subject/argument = no match" policy (a null subject never matches).
     /// </summary>
     /// <param name="value">The prefix to look for.</param>
     /// <param name="str">The string to check.</param>
     let inline startsWith (value: string) (str: string) =
-        isNotNullRef str && isNotNullRef value && str.StartsWith(value)
+        isNotNullRef str
+        && isNotNullRef value
+        && str.StartsWith(value, System.StringComparison.Ordinal)
 
     /// Returns true if string is null, empty, or only whitespace.
     let isNullOrWhiteSpace = System.String.IsNullOrWhiteSpace
@@ -53,10 +56,10 @@ module String =
     /// Returns <c>true</c> if <paramref name="str"/> starts with any of the <paramref name="values"/>.
     /// </summary>
     /// <remarks>
-    /// Null policy: a <c>null</c> <paramref name="str"/> never matches (null subject = no match); a
-    /// <c>null</c> or empty <paramref name="values"/> is treated as an empty set and never matches (null
-    /// collection = empty); a <c>null</c> element inside <paramref name="values"/> is skipped rather than
-    /// throwing, since it can never be a prefix of anything.
+    /// Ordinal comparison, like <see cref="contains"/>. Null policy: a <c>null</c> <paramref name="str"/>
+    /// never matches (null subject = no match); a <c>null</c> or empty <paramref name="values"/> is treated
+    /// as an empty set and never matches (null collection = empty); a <c>null</c> element inside
+    /// <paramref name="values"/> is skipped rather than throwing, since it can never be a prefix of anything.
     /// </remarks>
     /// <example>
     /// <code>
@@ -69,7 +72,8 @@ module String =
         if isNull str || isNull values then
             false
         else
-            values |> Array.exists (fun v -> isNotNullRef v && str.StartsWith(v))
+            values
+            |> Array.exists (fun v -> isNotNullRef v && str.StartsWith(v, System.StringComparison.Ordinal))
 
     /// <summary>
     /// Returns <c>true</c> if <paramref name="str"/> is equal to any of the <paramref name="values"/>, using the
@@ -160,11 +164,13 @@ module String =
             values |> Array.exists (fun c -> str[str.Length - 1] = c)
 
     /// <summary>
-    /// Replaces all line-ending sequences with the given replacement text.
+    /// Replaces all line-ending sequences with the given replacement text, in one pass over
+    /// <paramref name="str"/> so a <paramref name="replacementText"/> that itself contains <c>\r</c> or
+    /// <c>\n</c> is never re-scanned and re-replaced.
     /// Null-hardened: returns <c>null</c> unchanged if <paramref name="str"/> is <c>null</c>, matching
     /// <see cref="truncate"/>'s contract instead of throwing. A <c>null</c> <paramref name="replacementText"/>
-    /// is already handled gracefully by <see cref="System.String.Replace(string,string)"/>, which removes the
-    /// matched line endings instead of substituting them.
+    /// is already handled gracefully by <see cref="System.Text.StringBuilder.Append(string)"/>, which leaves
+    /// the matched line endings removed instead of substituted.
     /// </summary>
     /// <param name="replacementText">The text to substitute for line endings.</param>
     /// <param name="str">The input string.</param>
@@ -172,7 +178,27 @@ module String =
         if isNull str then
             str
         else
-            str.Replace("\r\n", replacementText).Replace("\r", replacementText).Replace("\n", replacementText)
+            let sb = StringBuilder(str.Length)
+            let mutable i = 0
+
+            while i < str.Length do
+                match str[i] with
+                | '\r' ->
+                    sb.Append(replacementText) |> ignore
+
+                    i <-
+                        if i + 1 < str.Length && str[i + 1] = '\n' then
+                            i + 2
+                        else
+                            i + 1
+                | '\n' ->
+                    sb.Append(replacementText) |> ignore
+                    i <- i + 1
+                | c ->
+                    sb.Append(c) |> ignore
+                    i <- i + 1
+
+            sb.ToString()
 
     /// Converts a string to uppercase using invariant culture.
     /// <param name="str">The string to convert.</param>
@@ -212,14 +238,16 @@ module String =
         isNotNullRef str && isNotNullRef value && str.Contains(value)
 
     /// <summary>
-    /// Returns <c>true</c> if str ends with value.
+    /// Returns <c>true</c> if str ends with value (ordinal).
     /// Null-hardened: returns <c>false</c> if either <paramref name="str"/> or <paramref name="value"/> is
     /// <c>null</c>, per the "null subject/argument = no match" policy.
     /// </summary>
     /// <param name="value">The suffix to look for.</param>
     /// <param name="str">The string to check.</param>
     let inline endsWith (value: string) (str: string) =
-        isNotNullRef str && isNotNullRef value && str.EndsWith(value)
+        isNotNullRef str
+        && isNotNullRef value
+        && str.EndsWith(value, System.StringComparison.Ordinal)
 
     /// Returns true if the string is null or empty (no whitespace check).
     let isNullOrEmpty = System.String.IsNullOrEmpty
@@ -258,7 +286,8 @@ module String =
     let inline remove (value: string) (str: string) = str.Replace(value, "")
 
     /// <summary>
-    /// Returns at most <paramref name="maxLen"/> characters from the start of the string.
+    /// Returns at most <paramref name="maxLen"/> UTF-16 code units from the start of the string,
+    /// backing off one position rather than cutting a surrogate pair in half.
     /// Null-safe: returns null if input is null.
     /// </summary>
     /// <example>
@@ -271,6 +300,8 @@ module String =
     let truncate (maxLen: int) (str: string) =
         if isNull str || str.Length <= maxLen then
             str
+        elif maxLen > 0 && System.Char.IsHighSurrogate(str[maxLen - 1]) then
+            str.Substring(0, maxLen - 1)
         else
             str.Substring(0, maxLen)
 
@@ -303,12 +334,14 @@ module String =
         else
             str
 
-    /// Pads the string on the left to the given total width.
+    /// Pads the string on the left to the given total width, counted in UTF-16 code units — a
+    /// surrogate pair (one visible character outside the BMP, e.g. most emoji) counts as two.
     /// <param name="totalWidth">The desired total length after padding.</param>
     /// <param name="str">The string to pad.</param>
     let inline padLeft (totalWidth: int) (str: string) = str.PadLeft(totalWidth)
 
-    /// Pads the string on the right to the given total width.
+    /// Pads the string on the right to the given total width, counted in UTF-16 code units — a
+    /// surrogate pair (one visible character outside the BMP, e.g. most emoji) counts as two.
     /// <param name="totalWidth">The desired total length after padding.</param>
     /// <param name="str">The string to pad.</param>
     let inline padRight (totalWidth: int) (str: string) = str.PadRight(totalWidth)

@@ -14,6 +14,11 @@ type WeatherReport =
 
 type Coordinates = { X: int; Y: int }
 
+[<Struct>]
+type StructWeather =
+    | ClearSkies
+    | Overcast
+
 [<TestFixture>]
 type UnionTests() =
 
@@ -46,3 +51,31 @@ type UnionTests() =
 
         %Assert.Throws<ArgumentException>(act)
         %Assert.Throws<ArgumentException>(act)
+
+    [<Test>]
+    member _.``caseNames returns a fresh array each call, so mutating one does not poison caseName or later caseNames calls``
+        ()
+        =
+        let first = Union.caseNames<WeatherReport> ()
+        first[0] <- "PWNED"
+
+        equals (Union.caseNames<WeatherReport> ()) [| "Sunny"; "Cloudy"; "Rainy" |]
+        equals (Union.caseName Sunny) "Sunny"
+
+    [<Test>]
+    member _.``caseName resolves a struct union's case correctly``() =
+        equals (Union.caseName ClearSkies) "ClearSkies"
+        equals (Union.caseName Overcast) "Overcast"
+
+    [<Test>]
+    member _.``caseName does not box a struct union value``() =
+        // Warm the per-'T cache (reflection, expression-tree compilation) before measuring.
+        Union.caseName Overcast |> ignore
+
+        let before = GC.GetAllocatedBytesForCurrentThread()
+
+        for _ in 1..1000 do
+            Union.caseName Overcast |> ignore
+
+        let after = GC.GetAllocatedBytesForCurrentThread()
+        equals (after - before) 0L

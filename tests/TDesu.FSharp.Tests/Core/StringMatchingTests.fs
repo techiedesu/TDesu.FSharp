@@ -463,6 +463,15 @@ type StringMatchingTests() =
         // ASSERT
         equals result "a|b|c|d"
 
+    [<Test>]
+    member _.``replaceEndLines does not re-scan a replacement text that itself contains a line ending``() =
+        // ARRANGE: a three-pass chained Replace would feed "\r\n" (the first pass's own output) back
+        // through the next two Replace calls and break it apart again.
+        let subject = "a\r\nb"
+        // ACT / ASSERT
+        equals (String.replaceEndLines "\r\n" subject) "a\r\nb"
+        equals (String.replaceEndLines "<br>\n" subject) "a<br>\nb"
+
     // ---- join null-hardening ----
 
     [<Test>]
@@ -574,6 +583,31 @@ type StringMatchingTests() =
         let result = String.endsWith "bc" subject
         // ASSERT
         isTrue result
+
+    // ---- startsWith / endsWith / startsWithAny are ordinal, not culture-sensitive ----
+
+    [<Test>]
+    member _.``startsWith uses ordinal comparison, unlike the culture-aware BCL overload``() =
+        // ARRANGE: U+200D ZERO WIDTH JOINER is an ignorable formatting character under the
+        // culture-aware String.StartsWith(string) overload (true both under the invariant culture and
+        // this process's own), so only an explicit ordinal comparison correctly refuses it.
+        let zwj = "\u200d"
+        // ACT / ASSERT
+        isFalse (String.startsWith zwj "abc")
+
+    [<Test>]
+    member _.``endsWith uses ordinal comparison, unlike the culture-aware BCL overload``() =
+        // ARRANGE
+        let zwj = "\u200d"
+        // ACT / ASSERT
+        isFalse (String.endsWith zwj "abc")
+
+    [<Test>]
+    member _.``startsWithAny uses ordinal comparison, unlike the culture-aware BCL overload``() =
+        // ARRANGE
+        let zwj = "\u200d"
+        // ACT / ASSERT
+        isFalse (String.startsWithAny [| zwj |] "abc")
 
 [<TestFixture>]
 type OptionConstructorTests() =
