@@ -51,9 +51,12 @@ module Memoize =
         let factory = Func<'TKey, 'TValue>(f)
 
         fun key ->
-            match cache.TryGetValue key with
-            | true, v -> v
-            | _ -> cache.GetOrAdd(key, factory)
+            let mutable v = Unchecked.defaultof<'TValue>
+
+            if cache.TryGetValue(key, &v) then
+                v
+            else
+                cache.GetOrAdd(key, factory)
 
     /// Memoizes an async function. Cached forever.
     /// Concurrent calls for a key that is not cached yet share one execution of f
@@ -65,9 +68,11 @@ module Memoize =
         let flights = SingleFlight<'TKey, 'TValue>()
 
         fun key ->
-            match cache.TryGetValue key with
-            | true, t -> t
-            | _ ->
+            let mutable t = null
+
+            if cache.TryGetValue(key, &t) then
+                t
+            else
                 flights.Run(
                     key,
                     fun () ->
