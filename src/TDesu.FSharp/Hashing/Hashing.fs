@@ -8,7 +8,16 @@ open System.Text
 /// <namespacedoc>
 ///   <summary>Hashing utilities: ContentHash (SHA256/SHA1/MD5), Hash.combine, CollectionComparer, EqualityComparer.</summary>
 /// </namespacedoc>
+/// <summary>
 /// Pipeline-friendly hash combining using System.HashCode.
+/// </summary>
+/// <remarks>
+/// <see cref="System.HashCode"/> is seeded per process: the same input hashes to a different code on
+/// every run. That is correct for in-memory keys (dictionaries, equality comparers) and nothing here
+/// claims otherwise — but never persist a <c>Hash.*</c> result, or compare one captured in a different
+/// process. Use <see cref="TDesu.FSharp.Hashing.ContentHash"/> for anything stored or compared across
+/// runs; it is stable.
+/// </remarks>
 [<RequireQualifiedAccess>]
 module Hash =
     /// Combines two values into a single hash code.
@@ -30,20 +39,35 @@ module Hash =
     let inline combine4 a b c d = HashCode.Combine(a, b, c, d)
 
     /// Hashes all elements of a sequence. Useful for using collections as dictionary keys.
+    /// A null sequence hashes as 0, matching this library's null-collection-is-empty policy.
     /// <param name="xs">The sequence of elements to hash.</param>
     let ofSeq (xs: 'a seq) =
-        let mutable hc = HashCode()
+        if isNull (box xs) then
+            0
+        else
+            let mutable hc = HashCode()
 
-        for x in xs do
-            hc.Add(x)
+            for x in xs do
+                hc.Add(x)
 
-        hc.ToHashCode()
+            hc.ToHashCode()
 
-    /// Hashes all elements of an array.
+    /// Hashes all elements of an array. A null array hashes as 0.
     /// <param name="xs">The array of elements to hash.</param>
-    let inline ofArray (xs: 'a[]) = ofSeq xs
+    let ofArray (xs: 'a[]) =
+        if isNull (box xs) then
+            0
+        else
+            // A dedicated loop rather than routing through ofSeq: indexing an array allocates no
+            // enumerator, unlike iterating it through the generic seq path.
+            let mutable hc = HashCode()
 
-    /// Hashes all elements of a list.
+            for i = 0 to xs.Length - 1 do
+                hc.Add(xs[i])
+
+            hc.ToHashCode()
+
+    /// Hashes all elements of a list. A null list hashes as 0.
     /// <param name="xs">The list of elements to hash.</param>
     let inline ofList (xs: 'a list) = ofSeq xs
 
@@ -137,12 +161,30 @@ module CollectionComparer =
 
     /// Equality comparer for generic arrays (structural).
     let forArray<'a when 'a: equality> () =
+        let elementComparer = EqualityComparer<'a>.Default
+
         { new IEqualityComparer<'a[]> with
             member _.Equals(a, b) =
-                if obj.ReferenceEquals(a, b) then true
-                elif isNull a || isNull b then false
-                elif a.Length <> b.Length then false
-                else Array.forall2 (=) a b
+                if obj.ReferenceEquals(a, b) then
+                    true
+                elif isNull a || isNull b then
+                    false
+                elif a.Length <> b.Length then
+                    false
+                else
+                    // An index loop against EqualityComparer<'a>.Default, rather than
+                    // Array.forall2 (=): the latter allocates the (=) closure it folds with on
+                    // every call and goes through F#'s generic equality instead.
+                    let mutable i = 0
+                    let mutable eq = true
+
+                    while eq && i < a.Length do
+                        if not (elementComparer.Equals(a[i], b[i])) then
+                            eq <- false
+
+                        i <- i + 1
+
+                    eq
 
             member _.GetHashCode(arr) = Hash.ofArray arr
         }
