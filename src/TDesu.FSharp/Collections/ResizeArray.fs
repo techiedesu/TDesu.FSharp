@@ -300,7 +300,9 @@ module ResizeArray =
         ra.Sort(Comparison(comparer))
         ra
 
-    /// Sorts by a key projection in-place and returns it.
+    /// Sorts by a key projection in-place and returns it. Stable: elements with equal keys keep
+    /// their original relative order, and the projection runs exactly once per element rather
+    /// than on every comparison.
     /// <paramref name="ra"/> is the mutation target: a null <paramref name="ra"/> has no empty instance
     /// to sort, so it is a programmer error.
     /// <exception cref="System.ArgumentNullException">When <paramref name="ra"/> is null.</exception>
@@ -308,7 +310,9 @@ module ResizeArray =
     /// <param name="ra">The ResizeArray to sort.</param>
     let inline sortBy ([<InlineIfLambda>] projection: 'T -> 'Key) (ra: ResizeArray<'T>) =
         Guard.notNull "ra" ra
-        ra.Sort(fun a b -> compare (projection a) (projection b))
+        let sorted = ra |> Seq.sortBy projection |> Seq.toArray
+        ra.Clear()
+        ra.AddRange(sorted)
         ra
 
     /// Removes all elements matching the predicate. Returns the ResizeArray.

@@ -27,7 +27,7 @@ open System.Runtime.CompilerServices
 /// <remarks>
 /// <para>
 /// This is a <c>ref struct</c>, the same tradeoff that keeps the BCL's own
-/// <c>System.Text.ValueStringBuilder</c> internal. Three ways it bites:
+/// <c>System.Text.ValueStringBuilder</c> internal. Four ways it bites:
 /// </para>
 /// <list type="bullet">
 ///   <item><description>
@@ -45,6 +45,16 @@ open System.Runtime.CompilerServices
 ///   expression, and a span built by hand from <c>NativePtr.stackalloc</c> is invisible to
 ///   escape analysis — returning one compiles silently. Allocate in the function that uses it,
 ///   never in a loop.
+///   </description></item>
+///   <item><description>
+///   <b>Not caught:</b> binding with <c>let</c> instead of <c>let mutable</c>. Every member that
+///   mutates state takes <c>this</c> by reference, so F# silently calls it on a defensive copy of
+///   a <c>let</c>-bound value — <c>Append</c> appears to succeed but never actually writes
+///   through to the original, so the built string comes back empty, and two separate
+///   <c>Dispose()</c> calls (for example one inside this type's own helpers and one from an
+///   explicit <c>finally</c>) can each still see the same non-null pooled array and each return
+///   it, corrupting the shared pool for every later unrelated renter. There is no compiler
+///   warning. Always bind with <c>let mutable</c>, exactly as the example above does.
 ///   </description></item>
 /// </list>
 /// <para>
@@ -167,15 +177,16 @@ type ValueStringBuilder =
             false
 
     /// <summary>
-    /// Returns the built string, then disposes this builder (matching
-    /// <c>System.Text.ValueStringBuilder</c>'s behavior) — do not <see cref="Append"/> after
-    /// calling this. A further <see cref="Dispose"/> call remains safe (idempotent).
+    /// Returns the built string. Unlike <c>System.Text.ValueStringBuilder</c>, this does
+    /// <b>not</b> dispose the builder — a <c>let</c>-bound builder's own <c>Dispose()</c> call
+    /// would run on a copy that cannot clear the original's state (see the type-level remarks),
+    /// so having <c>ToString</c> dispose too used to return the same pooled array to the shared
+    /// pool twice. The caller still owns exactly one <see cref="Dispose"/> call, from a
+    /// <c>try</c>/<c>finally</c>, as in the type's own example.
     /// </summary>
     override this.ToString() : string =
         let written = this._chars.Slice(0, this._pos)
-        let result = written.ToString()
-        this.Dispose()
-        result
+        written.ToString()
 
     /// <summary>
     /// Returns the rented array (if any) to the shared pool. Safe to call more than once —

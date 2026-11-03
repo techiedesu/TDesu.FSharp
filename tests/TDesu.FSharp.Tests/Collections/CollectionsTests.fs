@@ -865,3 +865,35 @@ type ResizeArrayNewFunctionsTests() =
             |> ignore
         // ASSERT
         %Assert.Throws<Exception>(act)
+
+[<TestFixture>]
+type ResizeArraySortByTests() =
+
+    [<Test>]
+    member _.``sortBy is stable: elements with equal keys keep their original relative order``() =
+        // ARRANGE: 24 elements (past List<T>.Sort's 16-element insertion-sort threshold, where
+        // introsort's instability would not otherwise show up) with a repeating key.
+        let ra = ResizeArray<int * int>(seq { for i in 0..23 -> i, i % 4 })
+        // ACT
+        let result = ResizeArray.sortBy snd ra
+        // ASSERT: within each key group, original indices stay in ascending order.
+        let originalIndicesByKey key =
+            result |> Seq.filter (fun (_, k) -> k = key) |> Seq.map fst |> Seq.toList
+
+        for key in 0..3 do
+            let indices = originalIndicesByKey key
+            equals indices (List.sort indices)
+
+    [<Test>]
+    member _.``sortBy calls the projection exactly once per element``() =
+        // ARRANGE
+        let ra = ResizeArray<int>([ 5; 3; 9; 1; 7; 2; 8; 4; 6; 0 ])
+        let mutable calls = 0
+
+        let projection x =
+            calls <- calls + 1
+            x
+        // ACT
+        ResizeArray.sortBy projection ra |> ignore
+        // ASSERT
+        equals calls 10

@@ -1,6 +1,7 @@
 namespace TDesu.FSharp.Tests
 
 open System
+open System.Buffers
 open System.Text
 open FSharp.NativeInterop
 open FsCheck
@@ -8,6 +9,7 @@ open NUnit.Framework
 open TDesu.FSharp.Buffers
 
 #nowarn "9" // one test exercises the genuine NativePtr.stackalloc pattern from the type's docs.
+#nowarn "52" // one test deliberately binds with `let` (not `let mutable`) to pin the finding-1 fix.
 
 [<TestFixture>]
 type ValueStringBuilderTests() =
@@ -186,13 +188,43 @@ type ValueStringBuilderTests() =
         sb.Dispose()
 
     [<Test>]
-    member _.``ToString disposes as a side effect, and a further Dispose call remains safe``() =
+    member _.``ToString does not dispose; the caller still owns exactly one Dispose call``() =
         let buffer = Array.zeroCreate<char> 2
         let mutable sb = ValueStringBuilder(Span<char>(buffer))
         sb.Append("grows past the tiny buffer before ToString")
         let s = sb.ToString()
         equals s "grows past the tiny buffer before ToString"
-        sb.Dispose() // idempotent even though ToString() already disposed internally
+        sb.Dispose() // the one and only Dispose call this builder needs
+        sb.Dispose() // idempotent
+
+    [<Test>]
+    member _.``a let-bound (not let mutable) builder cannot double-return its pooled array via ToString + finally Dispose``
+        ()
+        =
+        // Reproduces the type's own documented footgun: binding with `let` instead of `let mutable`
+        // means every mutating call — including the one ToString used to make internally — runs on a
+        // defensive copy, so before the fix ToString's own Dispose() and the `finally` Dispose() below
+        // each still saw the same non-null pooled array and each returned it, leaving the shared pool
+        // able to hand the identical array out to two unrelated renters.
+        let build () =
+            let sb = ValueStringBuilder(54321) // deliberately `let`, not `let mutable`
+
+            try
+                sb.Append("hello")
+                sb.ToString()
+            finally
+                sb.Dispose()
+
+        build () |> ignore
+
+        let r1 = ArrayPool<char>.Shared.Rent(54321)
+        let r2 = ArrayPool<char>.Shared.Rent(54321)
+
+        try
+            isFalse (obj.ReferenceEquals(r1, r2))
+        finally
+            ArrayPool<char>.Shared.Return(r1)
+            ArrayPool<char>.Shared.Return(r2)
 
     [<Test>]
     member _.``pool-only constructor builds correctly without a caller-supplied buffer``() =

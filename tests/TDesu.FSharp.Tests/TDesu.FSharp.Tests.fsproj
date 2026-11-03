@@ -47,6 +47,7 @@
         <Compile Include="Buffers\BuffersTests.fs" />
         <Compile Include="Buffers\ArrayPoolTests.fs" />
         <Compile Include="Buffers\ValueStringBuilderTests.fs" />
+        <Compile Include="ActivePatterns\ActivePatternsTests.fs" />
         <Compile Include="ActivePatterns\ComparisonsTests.fs" />
         <Compile Include="Types\TypesTests.fs" />
         <Compile Include="Resilience\ResilienceTests.fs" />
