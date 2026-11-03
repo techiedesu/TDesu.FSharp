@@ -38,3 +38,26 @@ type DisposableTests() =
             stack.Add(fun () -> order <- 3 :: order)
         // LIFO: 3, 2, 1 — prepend gives [1; 2; 3]
         equals (order |> List.toArray) [| 1; 2; 3 |]
+
+    [<Test>]
+    member _.``DeferStack dispose is idempotent``() =
+        let mutable count = 0
+        let stack = Disposable.deferStack ()
+        stack.Add(fun () -> count <- count + 1)
+
+        (stack :> IDisposable).Dispose()
+        (stack :> IDisposable).Dispose()
+        (stack :> IDisposable).Dispose()
+
+        equals count 1
+
+    [<Test>]
+    member _.``DeferStack reports aggregated dispose errors in occurrence order``() =
+        let stack = Disposable.deferStack ()
+        stack.Add(fun () -> failwith "first") // added first, runs last (LIFO)
+        stack.Add(fun () -> failwith "second") // added second, runs first (LIFO)
+
+        let ex =
+            Assert.Throws<AggregateException>(fun () -> (stack :> IDisposable).Dispose())
+
+        equals (ex.InnerExceptions |> Seq.map (fun e -> e.Message) |> Seq.toArray) [| "second"; "first" |]

@@ -64,7 +64,7 @@ module Disposable =
                     match errors with
                     | [] -> ()
                     | [ single ] -> raise single
-                    | _ -> aggregate errors
+                    | _ -> aggregate (List.rev errors)
         }
 
     /// Safely disposes a value (null-safe, no-op if null).
@@ -113,7 +113,8 @@ module Disposable =
 
     /// <summary>
     /// Deferred cleanup stack (like Go's <c>defer</c>). Add cleanups, all run on Dispose in LIFO order.
-    /// Not thread-safe: do not call <c>Add</c> concurrently with <c>Dispose</c>.
+    /// Not thread-safe: do not call <c>Add</c> concurrently with <c>Dispose</c>. Disposal is
+    /// idempotent — a second <c>Dispose()</c> call is a no-op and never re-runs the cleanups.
     /// </summary>
     /// <example>
     /// <code>
@@ -139,9 +140,14 @@ module Disposable =
 
         interface IDisposable with
             member _.Dispose() =
+                // Captured and cleared before running: a second Dispose() call then sees an empty
+                // list and does nothing, instead of re-running every cleanup again.
+                let pending = actions
+                actions <- []
+
                 let mutable errors = []
 
-                for f in actions do
+                for f in pending do
                     try
                         f ()
                     with ex ->
@@ -150,12 +156,23 @@ module Disposable =
                 match errors with
                 | [] -> ()
                 | [ single ] -> raise single
-                | _ -> aggregate errors
+                | _ -> aggregate (List.rev errors)
 
     /// Creates a new deferred cleanup stack.
     let deferStack () = new DeferStack()
 
+    /// <summary>
     /// Creates a temporary directory that is deleted on Dispose.
+    /// </summary>
+    /// <remarks>
+    /// The directory is created with the platform's default permissions. On Unix that is
+    /// <c>0777 &amp; ~umask</c> (usually <c>0755</c>) under the shared <c>/tmp</c>, so its contents
+    /// are world-readable; the name is GUID-based, so there is no predictability problem, only a
+    /// confidentiality one. Not hardened here: restricting it to the owner needs
+    /// <c>UnixFileMode</c>/<c>Directory.CreateDirectory(path, UnixFileMode)</c>, which this library's
+    /// single <c>netstandard2.1</c> target cannot reach without multi-targeting. Callers who put
+    /// sensitive data under this directory on Unix should tighten its permissions themselves.
+    /// </remarks>
     let tempDir () =
         let g = Guid.NewGuid()
         let path = IO.Path.Combine(IO.Path.GetTempPath(), g.ToString("N"))

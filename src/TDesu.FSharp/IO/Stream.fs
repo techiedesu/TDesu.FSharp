@@ -30,12 +30,15 @@ module Stream =
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Uses an 81920-byte buffer rented from <see cref="System.Buffers.ArrayPool{T}.Shared"/>, always
-    /// returned in a <c>finally</c> — including when <paramref name="cancellationToken"/> cancels the
-    /// copy or either stream throws. Neither <paramref name="source"/> nor <paramref name="destination"/>
-    /// is disposed by this function; the caller owns both. The repo's own <c>ArrayPool</c> helpers in
-    /// <c>Buffers.fs</c> are not used here: <c>Buffers.fs</c> compiles after this file in
-    /// <c>TDesu.FSharp.fsproj</c>, so this module cannot reference it.
+    /// Rents a buffer of at least 81920 bytes from <see cref="System.Buffers.ArrayPool{T}.Shared"/> —
+    /// the pool may return a larger array — always returned in a <c>finally</c>, including when
+    /// <paramref name="cancellationToken"/> cancels the copy or either stream throws. Each read is
+    /// windowed to at most <c>maxBytes - written + 1</c> bytes regardless of the rented array's actual
+    /// length, so a small <paramref name="maxBytes"/> cannot drain a large chunk from
+    /// <paramref name="source"/> before the limit is noticed. Neither <paramref name="source"/> nor
+    /// <paramref name="destination"/> is disposed by this function; the caller owns both. The repo's
+    /// own <c>ArrayPool</c> helpers in <c>Buffers.fs</c> are not used here: <c>Buffers.fs</c> compiles
+    /// after this file in <c>TDesu.FSharp.fsproj</c>, so this module cannot reference it.
     /// </para>
     /// <para>
     /// Deviates from the usual "null collection is empty" policy: a null stream cannot stand in for an
@@ -78,7 +81,15 @@ module Stream =
                 let mutable reading = true
 
                 while reading do
-                    let! bytesRead = source.ReadAsync(Memory(buffer), cancellationToken)
+                    let remaining = maxBytes - written
+
+                    let room =
+                        if remaining >= int64 buffer.Length then
+                            buffer.Length
+                        else
+                            int remaining + 1
+
+                    let! bytesRead = source.ReadAsync(Memory(buffer, 0, room), cancellationToken)
 
                     if bytesRead = 0 then
                         reading <- false

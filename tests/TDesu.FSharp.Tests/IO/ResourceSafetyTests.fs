@@ -105,6 +105,19 @@ type DisposableCombineTests() =
         // ASSERT
         equals child.DisposeCount 1
 
+    [<Test>]
+    member _.``two throwing disposables surface in occurrence order, not reversed``() =
+        // ARRANGE: combine disposes in reverse, so "second" throws first (chronologically), "first" throws second.
+        let first = Disposable.create (fun () -> failwith "first")
+        let second = Disposable.create (fun () -> failwith "second")
+        let combined = Disposable.combine [ first; second ]
+
+        // ACT
+        let ex = Assert.Throws<AggregateException>(fun () -> combined.Dispose())
+
+        // ASSERT
+        equals (ex.InnerExceptions |> Seq.map (fun e -> e.Message) |> Seq.toArray) [| "second"; "first" |]
+
 type private CountingStream(payload: byte[]) =
     inherit MemoryStream(payload)
     let mutable disposeCount = 0
@@ -255,3 +268,26 @@ type StreamCopyUpToTests() =
         )
 
         equals source.DisposeCount 0
+
+    [<Test>]
+    member _.``a small cap does not drain a large non-seekable-like source past the cap``() =
+        // ARRANGE
+        let payload = Array.zeroCreate<byte> (1024 * 1024)
+        use source = new MemoryStream(payload)
+        use destination = new MemoryStream()
+
+        // ACT
+        let result =
+            source
+            |> Stream.copyUpTo 10L destination CancellationToken.None
+            |> Task.getResult
+
+        // ASSERT: the read window is bounded to maxBytes - written + 1, not the whole rented buffer
+        // (which ArrayPool may size well above the 81920 bytes requested).
+        match result with
+        | Error e ->
+            equals e.MaxBytes 10L
+            equals e.BytesWritten 0L
+        | Ok written -> Assert.Fail($"expected Error, got Ok {written}")
+
+        equals source.Position 11L
