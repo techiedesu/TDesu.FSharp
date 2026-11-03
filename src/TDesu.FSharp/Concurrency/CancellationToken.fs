@@ -1,7 +1,6 @@
 namespace TDesu.FSharp.Concurrency
 
 open System
-open TDesu.FSharp.IO
 
 /// <summary>
 /// CancellationToken helpers — reduces boilerplate for timeout + linked patterns.
@@ -18,23 +17,17 @@ module CancellationToken =
     let inline withTimeout (timeout: TimeSpan) = new CancellationTokenSource(timeout)
 
     /// <summary>
-    /// Creates a linked CTS: cancels when parent is canceled OR after timeout.
-    /// Disposes both internal CTS on dispose. Use with <c>use</c>.
+    /// Creates a linked CTS: cancels when parent is canceled OR after timeout. A single object —
+    /// disposing it tears down both the parent link and the timeout timer, so <c>use</c> applies
+    /// directly and there is no second disposable to forget.
     /// </summary>
-    /// <returns>A tuple of the linked CTS and a disposable that cleans up both.</returns>
+    /// <returns>The linked CTS. Dispose it to release both the link and the timeout timer.</returns>
     /// <param name="timeout">The duration after which cancellation is requested.</param>
     /// <param name="parent">The parent token to link with the timeout.</param>
-    let linked (timeout: TimeSpan) (parent: CancellationToken) =
-        let timeoutCts = new CancellationTokenSource(timeout)
-
-        let linkedCts =
-            CancellationTokenSource.CreateLinkedTokenSource(parent, timeoutCts.Token)
-
-        linkedCts,
-        Disposable.create (fun () ->
-            linkedCts.Dispose()
-            timeoutCts.Dispose()
-        )
+    let linked (timeout: TimeSpan) (parent: CancellationToken) : CancellationTokenSource =
+        let cts = CancellationTokenSource.CreateLinkedTokenSource(parent)
+        cts.CancelAfter(timeout)
+        cts
 
     /// Creates a linked CTS from a parent token (no timeout).
     /// <param name="parent">The parent token to link from.</param>

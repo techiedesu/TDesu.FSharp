@@ -4,8 +4,11 @@ open System
 open TDesu.FSharp
 
 /// <summary>
-/// Sliding-window rate limiter. Tracks request count within a time window.
-/// Thread-safe.
+/// True sliding-window rate limiter. Every granted request's timestamp is kept in a ring buffer
+/// and expires individually once it ages out of the window, rather than resetting a fixed window
+/// wholesale — so no span of <paramref name="window"/> length ever sees more than
+/// <paramref name="maxRequests"/> admitted requests, including one straddling what would be a
+/// fixed window's boundary. Thread-safe.
 /// </summary>
 /// <example>
 /// <code>
@@ -30,8 +33,17 @@ type SlidingWindowLimiter(maxRequests: int, window: TimeSpan, clock: IClock) =
     let windowTicks = window.Ticks
 
     let lockObj = obj ()
+    // Ring buffer of the ticks at which each currently-live permit was granted, oldest at `head`;
+    // `count` of the `maxRequests` slots are in use.
+    let timestamps = Array.zeroCreate<int64> maxRequests
+    let mutable head = 0
     let mutable count = 0
-    let mutable windowStart = 0L
+
+    /// Drops every timestamp that has aged out of the window. Caller must hold lockObj.
+    let evictExpired (nowTicks: int64) =
+        while count > 0 && nowTicks - timestamps[head] >= windowTicks do
+            head <- (head + 1) % maxRequests
+            count <- count - 1
 
     /// Creates a limiter using the system clock.
     new(maxRequests: int, window: TimeSpan) = SlidingWindowLimiter(maxRequests, window, SystemClock.Instance)
@@ -45,16 +57,14 @@ type SlidingWindowLimiter(maxRequests: int, window: TimeSpan, clock: IClock) =
             lockObj
             (fun () ->
                 let nowTicks = clock.UtcNow.Ticks
+                evictExpired nowTicks
 
-                if nowTicks - windowStart >= windowTicks then
-                    count <- 1
-                    windowStart <- nowTicks
-                    Ok()
-                elif count < maxRequests then
+                if count < maxRequests then
+                    timestamps[(head + count) % maxRequests] <- nowTicks
                     count <- count + 1
                     Ok()
                 else
-                    Error(TimeSpan(windowTicks - (nowTicks - windowStart)))
+                    Error(TimeSpan(windowTicks - (nowTicks - timestamps[head])))
             )
 
     /// Reset the limiter to initial state. Thread-safe.
@@ -62,12 +72,20 @@ type SlidingWindowLimiter(maxRequests: int, window: TimeSpan, clock: IClock) =
         lock
             lockObj
             (fun () ->
+                head <- 0
                 count <- 0
-                windowStart <- 0L
             )
 
-    /// Current number of requests in the active window.
-    member _.Count = lock lockObj (fun () -> count)
+    /// Current number of requests in the active window. Expires with the window, like
+    /// <see cref="M:TDesu.FSharp.Concurrency.SlidingWindowLimiter.TryAcquire"/> does, rather than
+    /// reporting stale permits that have already aged out.
+    member _.Count =
+        lock
+            lockObj
+            (fun () ->
+                evictExpired (clock.UtcNow.Ticks)
+                count
+            )
 
     /// Maximum requests allowed per window.
     member _.MaxRequests = maxRequests

@@ -19,8 +19,9 @@ open System.Threading.Tasks
 /// </example>
 [<Sealed>]
 type TaskGroup private (cts: System.Threading.CancellationTokenSource) =
-    let tasks = ResizeArray<Task>()
+    let tasks = System.Collections.Concurrent.ConcurrentBag<Task>()
     let errors = System.Collections.Concurrent.ConcurrentBag<exn>()
+    let token = cts.Token
 
     /// Creates a TaskGroup with its own CancellationTokenSource.
     new() = new TaskGroup(new System.Threading.CancellationTokenSource())
@@ -30,8 +31,9 @@ type TaskGroup private (cts: System.Threading.CancellationTokenSource) =
     new(parentToken: System.Threading.CancellationToken) =
         new TaskGroup(System.Threading.CancellationTokenSource.CreateLinkedTokenSource(parentToken))
 
-    /// Token that is cancelled when any task fails or the group is disposed.
-    member _.Token = cts.Token
+    /// Token that is cancelled when any task fails or the group is disposed. Stays readable after
+    /// <see cref="M:TDesu.FSharp.Tasks.TaskGroup.Dispose"/>, unlike <c>cts.Token</c> itself.
+    member _.Token = token
 
     /// <summary>
     /// Add a task to the group. On failure, all other tasks are cancelled.
@@ -41,9 +43,9 @@ type TaskGroup private (cts: System.Threading.CancellationTokenSource) =
         let t =
             task {
                 try
-                    do! f cts.Token
+                    do! f token
                 with
-                | :? OperationCanceledException -> ()
+                | :? OperationCanceledException when cts.IsCancellationRequested -> ()
                 | ex ->
                     errors.Add(ex)
 

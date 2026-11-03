@@ -23,7 +23,11 @@ module PeriodicTimer =
             task {
                 while not ct.IsCancellationRequested do
                     try
-                        do! Task.Delay(interval, ct)
+                        if interval > TimeSpan.Zero then
+                            do! Task.Delay(interval, ct)
+                        else
+                            do! Task.Yield()
+
                         do! action ()
                     with
                     | :? OperationCanceledException -> ()
@@ -36,7 +40,8 @@ module PeriodicTimer =
 
         t :> Task
 
-    /// Like start, but action receives a counter (0-based) for each tick.
+    /// Like start, but action receives a counter (0-based) for each attempt — advanced whether
+    /// or not the attempt throws, so it never repeats an index.
     /// <param name="interval">The delay between each tick.</param>
     /// <param name="action">The async action to execute, receiving the current tick index.</param>
     /// <param name="ct">The cancellation token to stop the loop.</param>
@@ -53,9 +58,14 @@ module PeriodicTimer =
             task {
                 while not ct.IsCancellationRequested do
                     try
-                        do! Task.Delay(interval, ct)
-                        do! action tick
+                        if interval > TimeSpan.Zero then
+                            do! Task.Delay(interval, ct)
+                        else
+                            do! Task.Yield()
+
+                        let current = tick
                         tick <- tick + 1
+                        do! action current
                     with
                     | :? OperationCanceledException -> ()
                     | ex ->
@@ -95,10 +105,13 @@ module PeriodicTimer =
                         with _ ->
                             ()
 
-                    try
-                        do! Task.Delay(interval, ct)
-                    with :? OperationCanceledException ->
-                        ()
+                    if interval > TimeSpan.Zero then
+                        try
+                            do! Task.Delay(interval, ct)
+                        with :? OperationCanceledException ->
+                            ()
+                    else
+                        do! Task.Yield()
             }
 
         t :> Task
@@ -108,7 +121,9 @@ module PeriodicTimer =
     /// attempt. Only a cancellation that is ct's own ends the loop quietly; an
     /// OperationCanceledException raised for any other reason — an inner deadline, a foreign
     /// token — goes to onError like any other failure, so a step that keeps being cancelled
-    /// is paused between attempts rather than spun on.
+    /// is paused between attempts rather than spun on. The loop always suspends at least once
+    /// per iteration — including when the answered pause is zero, or onError itself throws —
+    /// instead of hijacking the caller's thread.
     /// <param name="step">The async step to execute; its result is the pause before the next run.</param>
     /// <param name="ct">The cancellation token to stop the loop.</param>
     /// <param name="onError">Handler invoked when a step throws; its return value is the pause before the next attempt.</param>
@@ -116,16 +131,29 @@ module PeriodicTimer =
         let t =
             task {
                 while not ct.IsCancellationRequested do
+                    let mutable ownCancellation = false
+                    let mutable pause = TimeSpan.Zero
+
                     try
-                        let! pause = step ()
-                        do! Task.Delay(pause, ct)
+                        let! p = step ()
+                        pause <- p
                     with
-                    | :? OperationCanceledException when ct.IsCancellationRequested -> ()
+                    | :? OperationCanceledException when ct.IsCancellationRequested -> ownCancellation <- true
                     | ex ->
-                        try
-                            do! Task.Delay(onError ex, ct)
-                        with _ ->
-                            ()
+                        pause <-
+                            try
+                                onError ex
+                            with _ ->
+                                TimeSpan.Zero
+
+                    if not ownCancellation then
+                        if pause > TimeSpan.Zero then
+                            try
+                                do! Task.Delay(pause, ct)
+                            with :? OperationCanceledException ->
+                                ()
+                        else
+                            do! Task.Yield()
             }
 
         t :> Task

@@ -26,7 +26,9 @@ type ParallelThrottleSafetyTests() =
 
         // ACT
         let act () =
-            Task.parallelThrottle 2 items f |> Task.getResult |> ignore
+            Task.parallelThrottle 2 items f CancellationToken.None
+            |> Task.getResult
+            |> ignore
 
         %Assert.Throws<Exception>(fun () -> act ())
         GC.Collect()
@@ -44,7 +46,8 @@ type ParallelThrottleSafetyTests() =
 
         // ACT
         let result =
-            Task.parallelThrottle 4 items (fun i -> task { return i }) |> Task.getResult
+            Task.parallelThrottle 4 items (fun i -> task { return i }) CancellationToken.None
+            |> Task.getResult
 
         // ASSERT
         equals result.Length 0
@@ -56,7 +59,8 @@ type ParallelThrottleSafetyTests() =
 
         // ACT
         let result =
-            Task.parallelThrottle 4 items (fun i -> task { return i }) |> Task.getResult
+            Task.parallelThrottle 4 items (fun i -> task { return i }) CancellationToken.None
+            |> Task.getResult
 
         // ASSERT
         equals result.Length 0
@@ -68,10 +72,105 @@ type ParallelThrottleSafetyTests() =
 
         // ACT
         let result =
-            Task.parallelThrottle 1 items (fun i -> task { return i * 10 })
+            Task.parallelThrottle 1 items (fun i -> task { return i * 10 }) CancellationToken.None
             |> Task.getResult
 
         // ASSERT
         equals (List.ofArray result) [ 10; 20; 30 ]
+
+    [<Test>]
+    member _.``maxConcurrent of zero throws synchronously instead of hanging forever``() =
+        let act () =
+            Task.parallelThrottle 0 [ 1 ] (fun i -> task { return i }) CancellationToken.None
+            |> ignore
+
+        let ex = Assert.Throws<ArgumentException>(act)
+        equals ex.ParamName "maxConcurrent"
+
+    [<Test>]
+    member _.``negative maxConcurrent throws synchronously``() =
+        let act () =
+            Task.parallelThrottle -1 [ 1 ] (fun i -> task { return i }) CancellationToken.None
+            |> ignore
+
+        %Assert.Throws<ArgumentException>(act)
+
+    [<Test>]
+    member _.``parallelThrottleUnit also rejects a non-positive maxConcurrent synchronously``() =
+        let act () =
+            Task.parallelThrottleUnit 0 [ 1 ] (fun _ -> task { return () }) CancellationToken.None
+            |> ignore
+
+        %Assert.Throws<ArgumentException>(act)
+
+    [<Test>]
+    member _.``an already-cancelled token stops the batch before any item starts``() =
+        task {
+            use cts = new CancellationTokenSource()
+            cts.Cancel()
+            let mutable started = 0
+
+            let f i =
+                task {
+                    Interlocked.Increment(&started) |> ignore
+                    return i
+                }
+
+            let t = Task.parallelThrottle 2 [ 1; 2; 3 ] f cts.Token
+
+            try
+                do! t :> Task
+            with :? OperationCanceledException ->
+                ()
+
+            equals t.Status TaskStatus.Canceled
+            equals started 0
+        }
+
+    [<Test>]
+    member _.``cancelling the token mid-batch stops queueing further items``() =
+        task {
+            use cts = new CancellationTokenSource()
+            let processed = Collections.Concurrent.ConcurrentBag<int>()
+
+            let f i =
+                task {
+                    if i = 2 then
+                        cts.Cancel()
+
+                    processed.Add i
+                    return i
+                }
+
+            let t = Task.parallelThrottle 1 [ 1; 2; 3; 4; 5 ] f cts.Token
+
+            try
+                do! t :> Task
+            with :? OperationCanceledException ->
+                ()
+
+            equals t.Status TaskStatus.Canceled
+            isTrue (processed.Count < 5)
+        }
+
+    [<Test>]
+    member _.``the surfaced exception keeps the stack trace of where it was originally thrown``() =
+        let failingItem (i: int) : Task<int> =
+            task {
+                do! Task.Yield()
+
+                if i = 1 then
+                    failwith "boom from failingItem"
+
+                return i
+            }
+
+        let act () =
+            Task.parallelThrottle 2 [ 1 ] failingItem CancellationToken.None
+            |> Task.getResult
+            |> ignore
+
+        let ex = Assert.Throws<Exception>(act)
+        isTrue (ex.StackTrace.Contains "failingItem")
 
 /// A stream that reports a fixed length of readable bytes and counts disposals.

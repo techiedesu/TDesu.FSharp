@@ -27,16 +27,17 @@ module ChannelWorker =
     type Handle<'T> internal (queue: ConcurrentQueue<'T>, signal: SemaphoreSlim, completion: Task) =
         /// <summary>
         /// Post an item for background processing. Non-blocking, unbounded.
-        /// Safe to call after cancellation (silently ignored).
+        /// Safe to call after cancellation — the item is dropped rather than queued forever.
         /// </summary>
         /// <param name="item">The item to enqueue for processing.</param>
         member _.Post(item: 'T) =
-            queue.Enqueue(item)
+            if not completion.IsCompleted then
+                queue.Enqueue(item)
 
-            try
-                signal.Release() |> ignore
-            with :? System.ObjectDisposedException ->
-                ()
+                try
+                    signal.Release() |> ignore
+                with :? System.ObjectDisposedException ->
+                    ()
 
         /// Current number of queued (unprocessed) items.
         member _.PendingCount = queue.Count
@@ -70,7 +71,9 @@ module ChannelWorker =
                             | true, item ->
                                 try
                                     do! handler item
-                                with ex ->
+                                with
+                                | :? System.OperationCanceledException when ct.IsCancellationRequested -> ()
+                                | ex ->
                                     try
                                         onError ex
                                     with _ ->
@@ -167,28 +170,33 @@ module ChannelWorker =
         // Completing the writer here — rather than leaving the loop below to notice `ct` on its
         // own — is what makes TryPost/PostAsync fail the moment the caller cancels, instead of
         // racing the loop's own teardown.
-        ct.Register(fun () -> channel.Writer.TryComplete() |> ignore) |> ignore
+        let registration = ct.Register(fun () -> channel.Writer.TryComplete() |> ignore)
 
         let workerTask =
             task {
                 try
-                    let mutable running = true
+                    try
+                        let mutable running = true
 
-                    while running && not ct.IsCancellationRequested do
-                        match channel.Reader.TryRead() with
-                        | true, item ->
-                            try
-                                do! handler item
-                            with ex ->
+                        while running && not ct.IsCancellationRequested do
+                            match channel.Reader.TryRead() with
+                            | true, item ->
                                 try
-                                    onError ex
-                                with _ ->
-                                    ()
-                        | false, _ ->
-                            let! canRead = channel.Reader.WaitToReadAsync(ct)
-                            running <- canRead
-                with :? System.OperationCanceledException ->
-                    ()
+                                    do! handler item
+                                with
+                                | :? System.OperationCanceledException when ct.IsCancellationRequested -> ()
+                                | ex ->
+                                    try
+                                        onError ex
+                                    with _ ->
+                                        ()
+                            | false, _ ->
+                                let! canRead = channel.Reader.WaitToReadAsync(ct)
+                                running <- canRead
+                    with :? System.OperationCanceledException ->
+                        ()
+                finally
+                    registration.Dispose()
             }
 
         BoundedHandle(channel, ct, workerTask)

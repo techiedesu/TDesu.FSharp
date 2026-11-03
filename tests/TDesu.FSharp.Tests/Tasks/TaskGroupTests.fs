@@ -58,11 +58,46 @@ type TaskGroupTests() =
         }
 
     [<Test>]
+    member _.``a task cancelled by a token that is not the group's own is reported as a failure``() =
+        task {
+            use group = new TaskGroup()
+            let mutable ran = false
+
+            group.Run(fun _ ->
+                task {
+                    use foreignCts = new CancellationTokenSource()
+                    foreignCts.Cancel()
+                    do! Task.Delay(5000, foreignCts.Token)
+                    ran <- true
+                }
+            )
+
+            let mutable caught: AggregateException option = None
+
+            try
+                do! group.WaitAll()
+            with :? AggregateException as ex ->
+                caught <- Some ex
+
+            isTrue caught.IsSome
+            isFalse ran
+        }
+
+    [<Test>]
     member _.``Token is cancelled on Dispose``() =
         let group = new TaskGroup()
         let token = group.Token
         isFalse token.IsCancellationRequested
         (group :> IDisposable).Dispose()
+        isTrue token.IsCancellationRequested
+
+    [<Test>]
+    member _.``Token can still be read after Dispose instead of throwing``() =
+        let group = new TaskGroup()
+        (group :> IDisposable).Dispose()
+
+        let token = group.Token // must not throw ObjectDisposedException
+
         isTrue token.IsCancellationRequested
 
     [<Test>]
@@ -90,4 +125,29 @@ type TaskGroupTests() =
 
             isTrue caught.IsSome
             isTrue (caught.Value.InnerExceptions.Count >= 1)
+        }
+
+    [<Test>]
+    member _.``concurrent Run calls do not lose tracked tasks under contention``() =
+        // [INFERENCE] the review's own 2400-call/8-thread stress did not reproduce loss from the
+        // unsynchronized ResizeArray either; this pins the fixed (ConcurrentBag) behaviour as a
+        // baseline rather than a proven failing-before repro.
+        task {
+            use group = new TaskGroup()
+            let threads = 8
+            let perThread = 300
+            let ran = Collections.Concurrent.ConcurrentBag<int>()
+
+            let starters = [
+                for _ in 1..threads ->
+                    Task.Run(fun () ->
+                        for i in 1..perThread do
+                            group.Run(fun _ -> task { ran.Add i })
+                    )
+            ]
+
+            do! Task.WhenAll(starters)
+            do! group.WaitAll()
+
+            equals ran.Count (threads * perThread)
         }

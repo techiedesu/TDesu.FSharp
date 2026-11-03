@@ -4,6 +4,12 @@ open System.Threading.Tasks
 open NUnit.Framework
 open TDesu.FSharp.Tasks
 
+/// An OperationCanceledException subclass, like a typed deadline a caller might catch
+/// specifically — used to prove a cancellation surfaces as its original instance, not a
+/// generic replacement.
+type private TypedCancellation(token: System.Threading.CancellationToken) =
+    inherit System.OperationCanceledException(token)
+
 [<TestFixture>]
 type TaskTests() =
 
@@ -19,6 +25,24 @@ type TaskTests() =
 
     [<Test>]
     member _.``runSynchronously handles null task``() = Task.runSynchronously (null: Task) // should not throw
+
+    [<Test>]
+    member _.``runSynchronously observes a fault that already happened before the call``() =
+        let t: Task = Task.FromException(System.InvalidOperationException "boom")
+        isTrue t.IsCompleted
+
+        let ex =
+            Assert.Throws<System.InvalidOperationException>(fun () -> Task.runSynchronously t)
+
+        equals ex.Message "boom"
+
+    [<Test>]
+    member _.``runSynchronously observes a cancellation that already happened before the call``() =
+        let t: Task = Task.FromCanceled(System.Threading.CancellationToken(true))
+        isTrue t.IsCompleted
+
+        Assert.Throws<TaskCanceledException>(fun () -> Task.runSynchronously t)
+        |> ignore
 
     // Task.loop exists so a recursive task { } can be written without `return! step`, which is
     // not a tail call: that shape keeps one state machine per iteration alive and nests real
@@ -127,6 +151,26 @@ type TaskTests() =
             TaskStatus.Faulted
 
         equals (statusOf (Task.map id (Task.FromCanceled<int> token))) TaskStatus.Canceled
+
+    [<Test>]
+    member _.``map and bind on a completed input rethrow the original cancellation instance, not a generic one``() =
+        let completed = Task.FromResult 42
+        let token = System.Threading.CancellationToken(true)
+
+        let causeOf (t: Task<int>) =
+            try
+                Task.getResult t |> ignore
+                None
+            with ex ->
+                Some ex
+
+        match causeOf (Task.map (fun _ -> raise (TypedCancellation token)) completed) with
+        | Some(:? TypedCancellation) -> ()
+        | other -> Assert.Fail($"map: expected TypedCancellation, got {other}")
+
+        match causeOf (Task.bind (fun _ -> raise (TypedCancellation token)) completed) with
+        | Some(:? TypedCancellation) -> ()
+        | other -> Assert.Fail($"bind: expected TypedCancellation, got {other}")
 
     [<Test>]
     member _.``map and bind still await an input that completes later``() =
