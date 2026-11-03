@@ -39,7 +39,14 @@ module ApiResponse =
     /// <summary>
     /// Converts an API response to a <c>Result</c>.
     /// </summary>
+    /// <remarks>
+    /// The three fields make four states representable that a single valid response can never
+    /// legitimately be in. This reads only the field matching <c>Success</c> — a record that
+    /// sets both <c>Data</c> and <c>Error</c> is accepted silently, and whichever field does not
+    /// match <c>Success</c> is discarded without warning.
+    /// </remarks>
     /// <exception cref="System.InvalidOperationException">When <c>Success=true</c> but <c>Data</c> is <c>None</c>.</exception>
+    /// <exception cref="System.InvalidOperationException">When <c>Success=false</c> but <c>Error</c> is <c>None</c>.</exception>
     /// <param name="response">The API response to convert.</param>
     let toResult (response: T<'TData, 'TError>) : Result<'TData, 'TError> =
         if response.Success then

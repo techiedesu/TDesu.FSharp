@@ -12,9 +12,9 @@ namespace TDesu.FSharp.ActivePatterns
 /// They rely only on F#'s built-in structural equality/comparison constraints, so they work for any
 /// comparable type — numbers, strings, <see cref="System.DateTime"/>, tuples, comparable records — not just numbers.
 ///
-/// Each pattern is <c>[&lt;return: Struct&gt;]</c>, so a match arm costs no allocation: a plain partial
-/// active pattern would allocate an <c>FSharpOption</c> every time the arm is evaluated, which for a
-/// one-comparison pattern is the whole cost of the match. The use site is unchanged either way.
+/// Each pattern returns a plain <c>bool</c>, not an <c>option</c>/<c>voption</c>, so a match arm
+/// costs no allocation without needing <c>[&lt;return: Struct&gt;]</c> at all — that attribute
+/// only matters for a pattern that carries a value out through <c>Some</c>/<c>ValueSome</c>.
 /// </remarks>
 [<AutoOpen>]
 module Comparisons =

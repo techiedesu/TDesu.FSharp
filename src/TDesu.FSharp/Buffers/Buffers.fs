@@ -2,6 +2,7 @@ namespace TDesu.FSharp.Buffers
 
 open System
 open System.Buffers
+open TDesu.FSharp
 
 /// <namespacedoc>
 ///   <summary>Buffer utilities: Bytes (xor, concat, constantTimeEquals), ArrayPool helpers.</summary>
@@ -21,14 +22,17 @@ module Bytes =
         for i = 0 to len - 1 do
             dst[dstOff + i] <- a[aOff + i] ^^^ b[bOff + i]
 
-    /// XORs two byte arrays element-wise, returning a new array.
+    /// <summary>
+    /// XORs two byte arrays element-wise, returning a new array of the same length.
+    /// </summary>
+    /// <exception cref="System.ArgumentException">When <paramref name="a"/> and <paramref name="b"/> have different lengths.</exception>
     /// <param name="a">The first byte array.</param>
     /// <param name="b">The second byte array.</param>
     let xor (a: byte[]) (b: byte[]) =
-        let len = min a.Length b.Length
-        let result = Array.zeroCreate len
+        Guard.isTrue "b" "a and b must have the same length." (a.Length = b.Length)
+        let result = Array.zeroCreate a.Length
 
-        for i = 0 to len - 1 do
+        for i = 0 to a.Length - 1 do
             result[i] <- a[i] ^^^ b[i]
 
         result
@@ -150,7 +154,18 @@ module Bytes =
 [<RequireQualifiedAccess>]
 module ArrayPool =
 
-    /// Rents a byte buffer, applies f, then returns the buffer to the pool.
+    /// <summary>
+    /// Rents a byte buffer, applies <paramref name="f"/>, then returns the buffer to the pool
+    /// without clearing it — the next renter of this size class can see whatever bytes
+    /// <paramref name="f"/> left behind. Use <see cref="useBytesClearing"/> for key material or
+    /// other sensitive data.
+    /// </summary>
+    /// <remarks>
+    /// The array <paramref name="f"/> receives is only <i>at least</i> <paramref name="minLength"/>
+    /// long — <see cref="System.Buffers.ArrayPool{T}"/> rounds up to its own bucket sizes — and
+    /// every byte beyond what <paramref name="f"/> itself writes is whatever a previous renter
+    /// left there, not zeroed.
+    /// </remarks>
     /// <param name="minLength">The minimum length of the rented buffer.</param>
     /// <param name="f">The function to apply to the rented buffer.</param>
     let inline useBytes (minLength: int) ([<InlineIfLambda>] f: byte[] -> 'R) : 'R =
@@ -161,7 +176,36 @@ module ArrayPool =
         finally
             ArrayPool<byte>.Shared.Return(arr)
 
-    /// Rents a typed buffer from the shared pool, applies f, then returns the buffer.
+    /// <summary>
+    /// Rents a byte buffer, applies <paramref name="f"/>, then returns the buffer to the pool
+    /// <b>cleared</b> — every byte is zeroed before the array goes back to the pool, so the next
+    /// renter cannot observe what <paramref name="f"/> wrote. Costs the zeroing pass that
+    /// <see cref="useBytes"/> skips; reach for it when the buffer may have held key material or
+    /// other data that must not survive into the next caller.
+    /// </summary>
+    /// <remarks>
+    /// The array <paramref name="f"/> receives is only <i>at least</i> <paramref name="minLength"/>
+    /// long, the same as <see cref="useBytes"/>.
+    /// </remarks>
+    /// <param name="minLength">The minimum length of the rented buffer.</param>
+    /// <param name="f">The function to apply to the rented buffer.</param>
+    let inline useBytesClearing (minLength: int) ([<InlineIfLambda>] f: byte[] -> 'R) : 'R =
+        let arr = ArrayPool<byte>.Shared.Rent(minLength)
+
+        try
+            f arr
+        finally
+            ArrayPool<byte>.Shared.Return(arr, true)
+
+    /// <summary>
+    /// Rents a typed buffer from the shared pool, applies <paramref name="f"/>, then returns the
+    /// buffer without clearing it. Use <see cref="usePooledClearing"/> for sensitive data.
+    /// </summary>
+    /// <remarks>
+    /// The array <paramref name="f"/> receives is only <i>at least</i> <paramref name="minLength"/>
+    /// long, and every element beyond what <paramref name="f"/> itself writes is whatever a
+    /// previous renter left there.
+    /// </remarks>
     /// <param name="minLength">The minimum length of the rented buffer.</param>
     /// <param name="f">The function to apply to the rented buffer.</param>
     let inline usePooled<'T, 'R> (minLength: int) ([<InlineIfLambda>] f: 'T[] -> 'R) : 'R =
@@ -172,24 +216,69 @@ module ArrayPool =
         finally
             ArrayPool<'T>.Shared.Return(arr)
 
-    /// Rents a byte buffer from the shared pool.
+    /// <summary>
+    /// Rents a typed buffer from the shared pool, applies <paramref name="f"/>, then returns the
+    /// buffer <b>cleared</b> — see <see cref="useBytesClearing"/> for why that matters.
+    /// </summary>
+    /// <param name="minLength">The minimum length of the rented buffer.</param>
+    /// <param name="f">The function to apply to the rented buffer.</param>
+    let inline usePooledClearing<'T, 'R> (minLength: int) ([<InlineIfLambda>] f: 'T[] -> 'R) : 'R =
+        let arr = ArrayPool<'T>.Shared.Rent(minLength)
+
+        try
+            f arr
+        finally
+            ArrayPool<'T>.Shared.Return(arr, true)
+
+    /// <summary>
+    /// Rents a byte buffer from the shared pool. The returned array's length is only
+    /// <i>at least</i> <paramref name="minLength"/>, and its contents are whatever a previous
+    /// renter left behind — nothing zeroes it on the way out.
+    /// </summary>
     /// <param name="minLength">The minimum length of the rented buffer.</param>
     let inline rentBytes (minLength: int) = ArrayPool<byte>.Shared.Rent(minLength)
 
-    /// Returns a byte buffer to the shared pool.
+    /// Returns a byte buffer to the shared pool without clearing it. Use
+    /// <see cref="returnBytesClearing"/> for key material or other sensitive data.
     /// <param name="arr">The byte array to return to the pool.</param>
     let inline returnBytes (arr: byte[]) = ArrayPool<byte>.Shared.Return(arr)
 
-    /// Rents a buffer, copies data into it, applies f, then returns the buffer.
+    /// Returns a byte buffer to the shared pool, zeroing it first so the next renter cannot
+    /// observe its previous contents.
+    /// <param name="arr">The byte array to return to the pool.</param>
+    let inline returnBytesClearing (arr: byte[]) =
+        ArrayPool<byte>.Shared.Return(arr, true)
+
+    /// <summary>
+    /// Rents a buffer, copies data into it, applies <paramref name="f"/>, then returns the buffer
+    /// without clearing it. Use <see cref="withCopyClearing"/> for sensitive data.
+    /// </summary>
     /// <param name="data">The source byte array to copy from.</param>
     /// <param name="offset">The starting offset in the source array.</param>
     /// <param name="length">The number of bytes to copy.</param>
     /// <param name="f">The function to apply to the copied buffer.</param>
     let inline withCopy (data: byte[]) (offset: int) (length: int) ([<InlineIfLambda>] f: byte[] -> 'R) : 'R =
         let arr = ArrayPool<byte>.Shared.Rent(length)
-        Buffer.BlockCopy(data, offset, arr, 0, length)
 
         try
+            Buffer.BlockCopy(data, offset, arr, 0, length)
             f arr
         finally
             ArrayPool<byte>.Shared.Return(arr)
+
+    /// <summary>
+    /// Rents a buffer, copies data into it, applies <paramref name="f"/>, then returns the buffer
+    /// <b>cleared</b> — see <see cref="useBytesClearing"/> for why that matters.
+    /// </summary>
+    /// <param name="data">The source byte array to copy from.</param>
+    /// <param name="offset">The starting offset in the source array.</param>
+    /// <param name="length">The number of bytes to copy.</param>
+    /// <param name="f">The function to apply to the copied buffer.</param>
+    let inline withCopyClearing (data: byte[]) (offset: int) (length: int) ([<InlineIfLambda>] f: byte[] -> 'R) : 'R =
+        let arr = ArrayPool<byte>.Shared.Rent(length)
+
+        try
+            Buffer.BlockCopy(data, offset, arr, 0, length)
+            f arr
+        finally
+            ArrayPool<byte>.Shared.Return(arr, true)

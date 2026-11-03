@@ -55,6 +55,27 @@ type ResultBuilder() =
             if not (obj.ReferenceEquals(resource, null)) then
                 (resource :> IDisposable).Dispose()
 
+    member inline _.While
+        ([<InlineIfLambda>] guard: unit -> bool, [<InlineIfLambda>] body: unit -> Result<unit, 'TError>)
+        : Result<unit, 'TError> =
+        let mutable result = Ok()
+        let mutable keepGoing = guard ()
+
+        while keepGoing do
+            match body () with
+            | Ok() -> keepGoing <- guard ()
+            | Error err ->
+                result <- Error err
+                keepGoing <- false
+
+        result
+
+    member inline this.For
+        (source: 'T seq, [<InlineIfLambda>] body: 'T -> Result<unit, 'TError>)
+        : Result<unit, 'TError> =
+        use e = source.GetEnumerator()
+        this.While((fun () -> e.MoveNext()), (fun () -> body e.Current))
+
 /// Computation expression instance for Result workflows: `result { ... }`.
 let result = ResultBuilder()
 
@@ -73,29 +94,25 @@ type OptionBuilder() =
         | ValueNone -> None
         | ValueSome value -> f value
 
-    member inline _.Return(maybeNull) =
-        if Object.ReferenceEquals(maybeNull, null) then
-            None
-        else
-            Some maybeNull
+    member inline _.Return(value: 'T) : 'T option = Some value
 
     member inline _.ReturnFrom(optionValue: 'T option) = optionValue
 
-    member inline _.Combine(optionValue, f) =
-        match optionValue with
-        | None -> f ()
-        | Some _ -> optionValue
+    member inline _.Zero() : unit option = Some()
 
-    member inline _.Combine(optionValue: 'T voption, f) =
-        match optionValue with
-        | ValueNone -> f ()
-        | ValueSome v -> Some v
+    member inline _.Combine(m: unit option, [<InlineIfLambda>] f: unit -> 'T option) : 'T option =
+        match m with
+        | None -> None
+        | Some() -> f ()
+
+    member inline _.Combine(m: unit voption, [<InlineIfLambda>] f: unit -> 'T option) : 'T option =
+        match m with
+        | ValueNone -> None
+        | ValueSome() -> f ()
 
     member inline _.Delay f = f
 
     member inline _.Run f = f ()
-
-    member inline _.Zero() = None
 
     member inline _.TryWith(expr, handler) =
         try
@@ -115,6 +132,25 @@ type OptionBuilder() =
         finally
             if not (obj.ReferenceEquals(resource, null)) then
                 resource.Dispose()
+
+    member inline _.While
+        ([<InlineIfLambda>] guard: unit -> bool, [<InlineIfLambda>] body: unit -> unit option)
+        : unit option =
+        let mutable result = Some()
+        let mutable keepGoing = guard ()
+
+        while keepGoing do
+            match body () with
+            | Some() -> keepGoing <- guard ()
+            | None ->
+                result <- None
+                keepGoing <- false
+
+        result
+
+    member inline this.For(source: 'T seq, [<InlineIfLambda>] body: 'T -> unit option) : unit option =
+        use e = source.GetEnumerator()
+        this.While((fun () -> e.MoveNext()), (fun () -> body e.Current))
 
 /// Computation expression instance for Option workflows: `option { ... }`.
 let option = OptionBuilder()
@@ -173,7 +209,8 @@ type TaskResultBuilder() =
 
     member inline _.Delay([<InlineIfLambda>] f: unit -> Task<Result<'T, 'TError>>) = f
 
-    member inline _.Run([<InlineIfLambda>] f: unit -> Task<Result<'T, 'TError>>) = f ()
+    member inline _.Run([<InlineIfLambda>] f: unit -> Task<Result<'T, 'TError>>) : Task<Result<'T, 'TError>> =
+        task { return! f () }
 
     member inline _.TryWith
         (body: unit -> Task<Result<'T, 'TError>>, handler: exn -> Task<Result<'T, 'TError>>)
@@ -201,6 +238,41 @@ type TaskResultBuilder() =
         task {
             use r = resource
             return! body r
+        }
+
+    member inline _.While
+        ([<InlineIfLambda>] guard: unit -> bool, [<InlineIfLambda>] body: unit -> Task<Result<unit, 'TError>>)
+        : Task<Result<unit, 'TError>> =
+        task {
+            let mutable result = Ok()
+            let mutable keepGoing = guard ()
+
+            while keepGoing do
+                match! body () with
+                | Ok() -> keepGoing <- guard ()
+                | Error err ->
+                    result <- Error err
+                    keepGoing <- false
+
+            return result
+        }
+
+    member inline _.For
+        (source: 'T seq, [<InlineIfLambda>] body: 'T -> Task<Result<unit, 'TError>>)
+        : Task<Result<unit, 'TError>> =
+        task {
+            use e = source.GetEnumerator()
+            let mutable result = Ok()
+            let mutable keepGoing = e.MoveNext()
+
+            while keepGoing do
+                match! body e.Current with
+                | Ok() -> keepGoing <- e.MoveNext()
+                | Error err ->
+                    result <- Error err
+                    keepGoing <- false
+
+            return result
         }
 
 /// Computation expression instance for Task+Result workflows: `taskResult { ... }`.
