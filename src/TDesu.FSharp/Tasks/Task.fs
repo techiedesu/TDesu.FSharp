@@ -1,7 +1,10 @@
 namespace TDesu.FSharp.Tasks
 
 open System
+open System.Threading
 open System.Threading.Tasks
+open System.Runtime.CompilerServices
+open System.Runtime.ExceptionServices
 open TDesu.FSharp.Operators
 
 /// <summary>
@@ -56,23 +59,34 @@ module Task =
     /// The semaphore is guaranteed to outlive every task that can still call <c>Release()</c> on it:
     /// if enumerating <paramref name="items"/> or awaiting the throttle throws (e.g. a cancelled wait
     /// or a throwing enumerator), every already-spawned task is drained before the semaphore is
-    /// disposed, so none of them can release an already-disposed <see cref="System.Threading.SemaphoreSlim"/>.
+    /// disposed, so none of them can release an already-disposed <see cref="SemaphoreSlim"/>.
     /// </remarks>
-    /// <param name="maxConcurrent">Maximum number of tasks allowed to run concurrently.</param>
+    /// <exception cref="ArgumentException"><paramref name="maxConcurrent"/> is not positive.</exception>
+    /// <param name="maxConcurrent">Maximum number of tasks allowed to run concurrently. Must be positive.</param>
     /// <param name="items">The input sequence of items to process. Null is treated as empty.</param>
     /// <param name="f">Async function applied to each item.</param>
-    let parallelThrottle (maxConcurrent: int) (items: 'T seq) (f: 'T -> Task<'TResult>) : Task<'TResult[]> =
+    /// <param name="ct">Observed before each item is dequeued and while waiting for a throttle slot.</param>
+    let parallelThrottle
+        (maxConcurrent: int)
+        (items: 'T seq)
+        (f: 'T -> Task<'TResult>)
+        (ct: CancellationToken)
+        : Task<'TResult[]> =
+        if maxConcurrent <= 0 then
+            invalidArg (nameof maxConcurrent) $"Must be positive, got %d{maxConcurrent}"
+
         let items = if isNotNullRef items then items else Seq.empty
 
         task {
-            let semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
+            let semaphore = new SemaphoreSlim(maxConcurrent)
 
             try
                 let tasks = ResizeArray<Task<'TResult>>()
 
                 try
                     for item in items do
-                        do! semaphore.WaitAsync()
+                        ct.ThrowIfCancellationRequested()
+                        do! semaphore.WaitAsync(ct)
 
                         tasks.Add(
                             task {
@@ -93,7 +107,8 @@ module Task =
                         with _ ->
                             ()
 
-                    return raise ex
+                    ExceptionDispatchInfo.Capture(ex).Throw()
+                    return Unchecked.defaultof<_>
             finally
                 semaphore.Dispose()
         }
@@ -106,21 +121,32 @@ module Task =
     /// <paramref name="items"/> sequence is treated as empty, and the semaphore is disposed only after
     /// every spawned task has been drained, even if the loop itself throws.
     /// </remarks>
-    /// <param name="maxConcurrent">Maximum number of tasks allowed to run concurrently.</param>
+    /// <exception cref="ArgumentException"><paramref name="maxConcurrent"/> is not positive.</exception>
+    /// <param name="maxConcurrent">Maximum number of tasks allowed to run concurrently. Must be positive.</param>
     /// <param name="items">The input sequence of items to process. Null is treated as empty.</param>
     /// <param name="f">Async function applied to each item.</param>
-    let parallelThrottleUnit (maxConcurrent: int) (items: 'T seq) (f: 'T -> Task<unit>) : Task<unit> =
+    /// <param name="ct">Observed before each item is dequeued and while waiting for a throttle slot.</param>
+    let parallelThrottleUnit
+        (maxConcurrent: int)
+        (items: 'T seq)
+        (f: 'T -> Task<unit>)
+        (ct: CancellationToken)
+        : Task<unit> =
+        if maxConcurrent <= 0 then
+            invalidArg (nameof maxConcurrent) $"Must be positive, got %d{maxConcurrent}"
+
         let items = if isNotNullRef items then items else Seq.empty
 
         task {
-            let semaphore = new System.Threading.SemaphoreSlim(maxConcurrent)
+            let semaphore = new SemaphoreSlim(maxConcurrent)
 
             try
                 let tasks = ResizeArray<Task<unit>>()
 
                 try
                     for item in items do
-                        do! semaphore.WaitAsync()
+                        ct.ThrowIfCancellationRequested()
+                        do! semaphore.WaitAsync(ct)
 
                         tasks.Add(
                             task {
@@ -140,17 +166,20 @@ module Task =
                         with _ ->
                             ()
 
-                    return raise ex
+                    ExceptionDispatchInfo.Capture(ex).Throw()
+                    return Unchecked.defaultof<_>
             finally
                 semaphore.Dispose()
 
             return ()
         }
 
-    /// Blocks until the task completes (ConfigureAwait false). No-op if null or already completed.
+    /// Blocks until the task completes (ConfigureAwait false). No-op if null; an already-completed
+    /// task still has its result observed, so a fault or cancellation that happened before the call
+    /// is not silently swallowed.
     /// <param name="t">The task to wait on.</param>
     let runSynchronously (t: #Task) =
-        if isNotNullRef t && not t.IsCompleted then
+        if isNotNullRef t then
             t.ConfigureAwait(false).GetAwaiter().GetResult()
 
     /// Synchronously gets the result of a Task (ConfigureAwait false).
@@ -165,17 +194,16 @@ module Task =
         // Most awaited work in a request pipeline is already finished by the time it is mapped
         // (a cache hit, a buffered read), and driving the state machine for it costs ~3x what
         // reading the result does. The builder reports a throwing `f` as a faulted task and an
-        // OperationCanceledException as a cancelled one, never as a synchronous throw — this
-        // path has to answer the same way or callers see a different contract.
+        // OperationCanceledException as a cancelled one carrying the original exception instance,
+        // never as a synchronous throw — this path uses the same builder so it answers exactly the
+        // same way.
         if t.IsCompletedSuccessfully then
             try
                 Task.FromResult(f t.Result)
-            with
-            | :? OperationCanceledException as ex ->
-                let source = TaskCompletionSource<'TResult>()
-                source.TrySetCanceled ex.CancellationToken |> ignore
-                source.Task
-            | ex -> Task.FromException<'TResult>(ex)
+            with ex ->
+                let mutable b = AsyncTaskMethodBuilder<'TResult>()
+                b.SetException ex
+                b.Task
         else
             task {
                 let! v = t
@@ -190,12 +218,10 @@ module Task =
         if t.IsCompletedSuccessfully then
             try
                 f t.Result
-            with
-            | :? OperationCanceledException as ex ->
-                let source = TaskCompletionSource<'TResult>()
-                source.TrySetCanceled ex.CancellationToken |> ignore
-                source.Task
-            | ex -> Task.FromException<'TResult>(ex)
+            with ex ->
+                let mutable b = AsyncTaskMethodBuilder<'TResult>()
+                b.SetException ex
+                b.Task
         else
             task {
                 let! v = t

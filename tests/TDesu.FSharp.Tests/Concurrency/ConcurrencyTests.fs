@@ -105,6 +105,16 @@ type BoundedQueueTests() =
         q.Enqueue(3)
         equals (q.ToSeq() |> Seq.toArray) [| 1; 2; 3 |]
 
+    [<Test>]
+    member _.``TryDequeue clears the out parameter instead of leaving the caller's old value on failure``() =
+        let q = BoundedQueue<string>(2)
+        let mutable result = "sentinel"
+
+        let ok = q.TryDequeue(&result)
+
+        isFalse ok
+        equals result null
+
 [<TestFixture>]
 type BoundedDictTests() =
 

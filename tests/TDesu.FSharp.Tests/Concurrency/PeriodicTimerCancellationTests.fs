@@ -92,6 +92,74 @@ type PeriodicTimerCancellationTests() =
             equals errors[0].Message "boom"
         }
 
+    [<Test>]
+    member _.``startCounted advances the tick index even when an attempt throws``() =
+        task {
+            // ARRANGE
+            let seen = ResizeArray<int>()
+            use cts = new CancellationTokenSource()
+
+            let action tick =
+                task {
+                    seen.Add tick
+
+                    if seen.Count <= 2 then
+                        failwith "boom"
+
+                    if seen.Count >= 5 then
+                        cts.Cancel()
+                }
+
+            // ACT
+            let _ =
+                PeriodicTimer.startCounted (TimeSpan.FromMilliseconds 5.) action cts.Token ignore
+
+            let! reached = Task.waitUntil (TimeSpan.FromSeconds 2.) (fun () -> seen.Count >= 5)
+
+            // ASSERT
+            isTrue reached
+            equals (seen |> Seq.toList) [ 0; 1; 2; 3; 4 ]
+        }
+
+    [<Test>]
+    member _.``start does not block the caller's thread when interval is TimeSpan.Zero``() =
+        task {
+            // ARRANGE — a real external deadline bounds the loop so this test cannot hang even if
+            // the fix regresses; the loop must still return control long before this fires.
+            use cts = new CancellationTokenSource()
+            cts.CancelAfter(TimeSpan.FromMilliseconds 800.)
+            let action () = task { return () }
+
+            // ACT
+            let loopTask = PeriodicTimer.start TimeSpan.Zero action cts.Token ignore
+
+            // ASSERT: the call above returned before the external deadline could have fired, so
+            // the loop must still be running in the background rather than already finished.
+            isFalse loopTask.IsCompleted
+
+            let! completed =
+                Task.waitUntil (TimeSpan.FromSeconds 2.) (fun () -> loopTask.IsCompleted)
+
+            isTrue completed
+        }
+
+    [<Test>]
+    member _.``startCounted does not block the caller's thread when interval is TimeSpan.Zero``() =
+        task {
+            use cts = new CancellationTokenSource()
+            cts.CancelAfter(TimeSpan.FromMilliseconds 800.)
+            let action (_: int) = task { return () }
+
+            let loopTask = PeriodicTimer.startCounted TimeSpan.Zero action cts.Token ignore
+
+            isFalse loopTask.IsCompleted
+
+            let! completed =
+                Task.waitUntil (TimeSpan.FromSeconds 2.) (fun () -> loopTask.IsCompleted)
+
+            isTrue completed
+        }
+
 [<TestFixture>]
 type PeriodicTimerStartImmediateTests() =
 
@@ -176,6 +244,23 @@ type PeriodicTimerStartImmediateTests() =
             // ASSERT
             isTrue completed
             equals loopTask.Status TaskStatus.RanToCompletion
+        }
+
+    [<Test>]
+    member _.``startImmediate does not block the caller's thread when interval is TimeSpan.Zero``() =
+        task {
+            use cts = new CancellationTokenSource()
+            cts.CancelAfter(TimeSpan.FromMilliseconds 800.)
+            let action () = task { return () }
+
+            let loopTask = PeriodicTimer.startImmediate TimeSpan.Zero action cts.Token ignore
+
+            isFalse loopTask.IsCompleted
+
+            let! completed =
+                Task.waitUntil (TimeSpan.FromSeconds 2.) (fun () -> loopTask.IsCompleted)
+
+            isTrue completed
         }
 
 [<TestFixture>]
@@ -307,4 +392,38 @@ type PeriodicTimerRunTests() =
             // ASSERT
             isTrue completed
             equals loopTask.Status TaskStatus.RanToCompletion
+        }
+
+    [<Test>]
+    member _.``run does not block the caller's thread when a step answers TimeSpan.Zero``() =
+        task {
+            use cts = new CancellationTokenSource()
+            cts.CancelAfter(TimeSpan.FromMilliseconds 800.)
+            let step () = task { return TimeSpan.Zero }
+
+            let loopTask = PeriodicTimer.run step cts.Token (fun _ -> TimeSpan.Zero)
+
+            isFalse loopTask.IsCompleted
+
+            let! completed =
+                Task.waitUntil (TimeSpan.FromSeconds 2.) (fun () -> loopTask.IsCompleted)
+
+            isTrue completed
+        }
+
+    [<Test>]
+    member _.``run still yields when onError itself throws, instead of spinning with no pause at all``() =
+        task {
+            use cts = new CancellationTokenSource()
+            cts.CancelAfter(TimeSpan.FromMilliseconds 800.)
+            let step () : Task<TimeSpan> = task { return failwith "boom" }
+
+            let loopTask = PeriodicTimer.run step cts.Token (fun _ -> failwith "onError boom")
+
+            isFalse loopTask.IsCompleted
+
+            let! completed =
+                Task.waitUntil (TimeSpan.FromSeconds 2.) (fun () -> loopTask.IsCompleted)
+
+            isTrue completed
         }

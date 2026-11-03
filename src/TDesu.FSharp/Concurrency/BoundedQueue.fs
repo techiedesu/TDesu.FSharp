@@ -33,12 +33,15 @@ type BoundedQueue<'T>(capacity: int) =
     member _.Peek() = queue.Peek()
 
     /// Tries to dequeue, returns true + value if successful.
-    /// <param name="result">When successful, receives the dequeued item.</param>
+    /// On failure, <paramref name="result"/> is set to the type's default, matching
+    /// <see cref="System.Collections.Generic.Dictionary{TKey,TValue}.TryGetValue"/>'s convention.
+    /// <param name="result">Receives the dequeued item, or the default value on failure.</param>
     member _.TryDequeue([<System.Runtime.InteropServices.Out>] result: 'T byref) =
         if queue.Count > 0 then
             result <- queue.Dequeue()
             true
         else
+            result <- Unchecked.defaultof<'T>
             false
 
     /// Returns all items as a sequence.

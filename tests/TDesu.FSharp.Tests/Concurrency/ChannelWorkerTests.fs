@@ -1,10 +1,30 @@
 namespace TDesu.FSharp.Tests
 
 open System
+open System.Reflection
 open System.Threading
 open System.Threading.Tasks
 open NUnit.Framework
 open TDesu.FSharp.Concurrency
+
+[<AutoOpen>]
+module private ChannelWorkerRegistrationProbe =
+    /// Counts live (non-disposed) callback registrations on a CancellationTokenSource by walking
+    /// its private linked list — no public API exposes this. Fragile across runtimes by
+    /// construction; used only to pin the registration leak in finding #4.
+    let countLiveRegistrations (cts: CancellationTokenSource) : int =
+        let flags = BindingFlags.Instance ||| BindingFlags.NonPublic ||| BindingFlags.Public
+        let regs = cts.GetType().GetField("_registrations", flags).GetValue(cts)
+        let callbacksField = regs.GetType().GetField("Callbacks", flags)
+        let nextField = callbacksField.FieldType.GetField("Next", flags)
+        let mutable node = callbacksField.GetValue(regs)
+        let mutable count = 0
+
+        while not (isNull node) do
+            count <- count + 1
+            node <- nextField.GetValue(node)
+
+        count
 
 [<TestFixture>]
 type ChannelWorkerTests() =
@@ -159,6 +179,50 @@ type ChannelWorkerTests() =
 
             // Item 2 should still be processed despite onError throwing
             isTrue (processed.ToArray() |> Array.contains 2)
+        }
+
+    [<Test>]
+    member _.``Post after the worker has stopped drops the item instead of growing PendingCount forever``() =
+        task {
+            use cts = new CancellationTokenSource()
+
+            let worker =
+                ChannelWorker.start (fun (_: int) -> Task.CompletedTask) ignore cts.Token
+
+            cts.Cancel()
+            do! worker.Completion
+
+            for i in 1..50 do
+                worker.Post(i)
+
+            equals worker.PendingCount 0
+        }
+
+    [<Test>]
+    member _.``onError does not fire for an ordinary cancellation during a handler that honours ct``() =
+        task {
+            use cts = new CancellationTokenSource()
+            let errors = Collections.Concurrent.ConcurrentBag<exn>()
+            let started = new SemaphoreSlim(0)
+
+            let worker =
+                ChannelWorker.start
+                    (fun (_: int) ->
+                        task {
+                            started.Release() |> ignore
+                            do! Task.Delay(5000, cts.Token)
+                        }
+                    )
+                    (fun ex -> errors.Add ex)
+                    cts.Token
+
+            worker.Post(1)
+            do! started.WaitAsync()
+            cts.Cancel()
+
+            do! worker.Completion
+
+            equals errors.Count 0
         }
 
 [<TestFixture>]
@@ -317,4 +381,48 @@ type ChannelWorkerBoundedTests() =
 
             equals (processed.ToArray() |> Array.sort) [| 1; 2; 3 |]
             cts.Cancel()
+        }
+
+    [<Test>]
+    member _.``onError does not fire for an ordinary cancellation during a bounded handler that honours ct``() =
+        task {
+            use cts = new CancellationTokenSource()
+            let errors = Collections.Concurrent.ConcurrentBag<exn>()
+            let started = new SemaphoreSlim(0)
+
+            let worker =
+                ChannelWorker.startBounded
+                    10
+                    (fun (_: int) ->
+                        task {
+                            started.Release() |> ignore
+                            do! Task.Delay(5000, cts.Token)
+                        }
+                    )
+                    (fun ex -> errors.Add ex)
+                    cts.Token
+
+            worker.TryPost(1) |> ignore
+            do! started.WaitAsync()
+            cts.Cancel()
+
+            do! worker.Completion
+
+            equals errors.Count 0
+        }
+
+    [<Test>]
+    member _.``startBounded disposes its ct registration once the worker stops, instead of leaking one per worker``() =
+        task {
+            use cts = new CancellationTokenSource() // long-lived: outlives every worker started below
+
+            for _ in 1..20 do
+                let worker =
+                    ChannelWorker.startBounded 4 (fun (_: int) -> Task.CompletedTask) ignore cts.Token
+
+                worker.TryPost(1) |> ignore
+                worker.Complete()
+                do! worker.Completion
+
+            equals (countLiveRegistrations cts) 0
         }

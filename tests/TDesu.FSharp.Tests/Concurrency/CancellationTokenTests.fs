@@ -15,11 +15,7 @@ type CancellationTokenTests() =
     [<Test>]
     member _.``linked cancels when parent cancels``() =
         use parentCts = new CancellationTokenSource()
-
-        let linkedCts, cleanup =
-            CancellationToken.linked (TimeSpan.FromSeconds 30.) parentCts.Token
-
-        use _ = cleanup
+        use linkedCts = CancellationToken.linked (TimeSpan.FromSeconds 30.) parentCts.Token
         isFalse linkedCts.Token.IsCancellationRequested
         parentCts.Cancel()
         isTrue linkedCts.Token.IsCancellationRequested
@@ -29,10 +25,8 @@ type CancellationTokenTests() =
         task {
             use parentCts = new CancellationTokenSource()
 
-            let linkedCts, cleanup =
+            use linkedCts =
                 CancellationToken.linked (TimeSpan.FromMilliseconds 50.) parentCts.Token
-
-            use _ = cleanup
 
             let! expired =
                 Task.waitUntil (TimeSpan.FromSeconds 2.) (fun () -> linkedCts.Token.IsCancellationRequested)
@@ -63,28 +57,28 @@ type CancellationTokenTests() =
         }
 
     [<Test>]
-    member _.``linked cleanup disposes the returned token source``() =
+    member _.``linked returns a single CancellationTokenSource usable with a bare use``() =
         // ARRANGE
         use parentCts = new CancellationTokenSource()
 
-        let linkedCts, cleanup =
+        // ACT — the type annotation alone pins the API shape: a tuple would fail to type-check here.
+        let linkedCts: CancellationTokenSource =
             CancellationToken.linked (TimeSpan.FromSeconds 30.) parentCts.Token
 
-        // ACT
-        cleanup.Dispose()
-
         // ASSERT
+        isFalse linkedCts.Token.IsCancellationRequested
+        linkedCts.Dispose()
         %Assert.Throws<ObjectDisposedException>(fun () -> linkedCts.Token |> ignore)
 
     [<Test>]
-    member _.``linked cleanup can be disposed twice without throwing``() =
+    member _.``linked can be disposed twice without throwing``() =
         // ARRANGE
         use parentCts = new CancellationTokenSource()
-        let _, cleanup = CancellationToken.linked (TimeSpan.FromSeconds 30.) parentCts.Token
+        let cts = CancellationToken.linked (TimeSpan.FromSeconds 30.) parentCts.Token
 
         // ACT
-        cleanup.Dispose()
-        cleanup.Dispose()
+        cts.Dispose()
+        cts.Dispose()
 
         // ASSERT
         Assert.Pass()
