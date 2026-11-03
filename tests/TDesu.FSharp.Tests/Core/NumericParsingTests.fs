@@ -79,6 +79,19 @@ type NumericParsingTests() =
         isSome 255uy (Byte.tryParse "255")
         isNone (Byte.tryParse "256")
 
+    /// `ar-001`'s negative sign is U+061C ARABIC LETTER MARK + `-`, not a bare ASCII `-`; the bare
+    /// integer parsers must not consult it.
+    [<Test>]
+    member _.``Int32 and SByte tryParse are culture-invariant: a locale with a non-ASCII negative sign still parses "-42"``
+        ()
+        =
+        withCulture
+            "ar-001"
+            (fun () ->
+                isSome -42 (Int32.tryParse "-42")
+                isSome -42y (SByte.tryParse "-42")
+            )
+
     // ── voption variants ──
 
     [<Test>]
@@ -128,6 +141,13 @@ type NumericParsingTests() =
         isSome 1.5m (Decimal.tryParseInv "1.5")
         isNone (Decimal.tryParseInv "1,5")
 
+    /// `Decimal.tryParse`'s default <c>NumberStyles.Number</c> already allows a trailing sign (and
+    /// has done since before `tryParseInv` existed); `tryParseInv` must not be stricter than that.
+    [<Test>]
+    member _.``Decimal tryParseInv accepts a trailing sign, like tryParse already does``() =
+        isSome -42m (Decimal.tryParseInv "42-")
+        isSome -42m (Decimal.tryParse "42-")
+
     // ── Which culture each half answers to ──
 
     /// The point of the `Inv` half: the same string yields the same value on a developer's machine and
@@ -169,6 +189,22 @@ type NumericParsingTests() =
     [<Test>]
     member _.``DateTime tryParseInv rejects a non-date``() =
         isNone (DateTime.tryParseInv "not a date")
+
+    /// A `Z`-suffixed instant must read the same clock value and `Kind = Utc` on every host, not get
+    /// silently converted to the host's own local time the way <c>DateTimeStyles.None</c> does.
+    [<Test>]
+    member _.``DateTime tryParseInv keeps a Z-suffixed instant as UTC, unaffected by the host's time zone``() =
+        let parsed = DateTime.tryParseInv "2026-08-29T14:03:00Z"
+        isSome (DateTime(2026, 8, 29, 14, 3, 0)) parsed
+        equals (parsed |> Option.map _.Kind) (Some DateTimeKind.Utc)
+
+    /// A string with no offset at all must be assumed UTC, not the host's current offset.
+    [<Test>]
+    member _.``DateTimeOffset tryParseInv assumes UTC for an offset-less string, unaffected by the host's time zone``
+        ()
+        =
+        let parsed = DateTimeOffset.tryParseInv "2026-08-29T14:03:00"
+        equals (parsed |> Option.map _.Offset) (Some TimeSpan.Zero)
 
     [<Test>]
     member _.``DateTimeOffset tryParseInv keeps the stated offset``() =

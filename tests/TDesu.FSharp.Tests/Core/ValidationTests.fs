@@ -132,9 +132,16 @@ type ValidationTests() =
         equals v 42
 
     [<Test>]
-    member _.``valueOrFail throws on Error``() =
-        Assert.Throws<InvalidOperationException>(fun () -> Validation.error "bad" |> Validation.valueOrFail |> ignore)
-        |> ignore
+    member _.``valueOrFail throws on Error, with the errors included in the message``() =
+        let ex =
+            Assert.Throws<InvalidOperationException>(fun () ->
+                Validation.errors [ "name required"; "age invalid" ]
+                |> Validation.valueOrFail
+                |> ignore
+            )
+
+        isTrue (ex.Message.Contains "name required")
+        isTrue (ex.Message.Contains "age invalid")
 
     [<Test>]
     member _.``defaultValue returns value on Ok``() =

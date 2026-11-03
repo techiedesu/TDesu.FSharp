@@ -37,10 +37,12 @@ module Numeric =
     /// Linearly interpolates between <paramref name="a"/> and <paramref name="b"/> by fraction <paramref name="t"/>.
     /// </summary>
     /// <remarks>
-    /// Unclamped: <paramref name="t"/> is not restricted to [0, 1]. <c>t = 0</c> returns <paramref name="a"/>,
-    /// <c>t = 1</c> returns <paramref name="b"/>, and values outside [0, 1] extrapolate linearly past
-    /// <paramref name="a"/> or <paramref name="b"/> instead of clamping. Pipe <paramref name="t"/> through
-    /// <see cref="clamp"/> first if clamped interpolation is what you want.
+    /// Unclamped: <paramref name="t"/> is not restricted to [0, 1]. <c>t = 0</c> returns exactly
+    /// <paramref name="a"/> and <c>t = 1</c> returns exactly <paramref name="b"/> — computed as
+    /// <c>a * (1 - t) + b * t</c> rather than <c>a + (b - a) * t</c>, so the endpoints round-trip
+    /// exactly instead of accumulating floating-point error — and values outside [0, 1] extrapolate
+    /// linearly past <paramref name="a"/> or <paramref name="b"/> instead of clamping. Pipe
+    /// <paramref name="t"/> through <see cref="clamp"/> first if clamped interpolation is what you want.
     /// </remarks>
     /// <example>
     /// <code>
@@ -53,7 +55,8 @@ module Numeric =
     /// <param name="a">Value at <c>t = 0</c>.</param>
     /// <param name="b">Value at <c>t = 1</c>.</param>
     /// <param name="t">Interpolation fraction.</param>
-    let inline lerp (a: 'a) (b: 'a) (t: 'a) : 'a = a + (b - a) * t
+    let inline lerp (a: 'a) (b: 'a) (t: 'a) : 'a =
+        a * (LanguagePrimitives.GenericOne - t) + b * t
 
     /// <summary>
     /// Inverse of <see cref="lerp"/>: finds the fraction <c>t</c> at which <paramref name="value"/> occurs

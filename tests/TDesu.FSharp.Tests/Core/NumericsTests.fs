@@ -35,7 +35,10 @@ type NumericTests() =
     member _.``lerp at t=0 returns a``() = equals (Numeric.lerp 0.0 10.0 0.0) 0.0
 
     [<Test>]
-    member _.``lerp at t=1 returns b``() = equals (Numeric.lerp 0.0 10.0 1.0) 10.0
+    member _.``lerp at t=1 returns b exactly, even where a + (b - a) * t would round differently``() =
+        equals (Numeric.lerp 0.0 10.0 1.0) 10.0
+        // a + (b - a) * t loses b to a's magnitude here: 1e16 + (1.0 - 1e16) * 1.0 rounds to 0.0.
+        equals (Numeric.lerp 1e16 1.0 1.0) 1.0
 
     [<Test>]
     member _.``lerp at t=0.5 returns the midpoint``() = equals (Numeric.lerp 0.0 10.0 0.5) 5.0

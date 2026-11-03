@@ -16,8 +16,7 @@ module UnixTime =
 
     /// Calibration snapshot — swapped atomically as a single reference.
     [<Sealed>]
-    type private CalData(seconds: int64, ms: int64, ticks: int64) =
-        member _.Seconds = seconds
+    type private CalData(ms: int64, ticks: int64) =
         member _.Ms = ms
         member _.Ticks = ticks
 
@@ -25,13 +24,16 @@ module UnixTime =
 
     let mutable private cal =
         let now = DateTimeOffset.UtcNow
-        CalData(now.ToUnixTimeSeconds(), now.ToUnixTimeMilliseconds(), sw.ElapsedTicks)
+        CalData(now.ToUnixTimeMilliseconds(), sw.ElapsedTicks)
 
-    /// Recalibrate from system clock. Called automatically if drift > 1 minute.
+    /// Recalibrates from the system clock. Not a drift check: there is no comparison against the
+    /// live clock here, only a swap to its current reading, and it is called automatically once
+    /// elapsed time since the last calibration exceeds 60 seconds — so a system clock step (an NTP
+    /// correction, say) is not noticed until that window next elapses.
     /// Thread-safe: the CalData reference is swapped atomically.
     let recalibrate () =
         let now = DateTimeOffset.UtcNow
-        Threading.Volatile.Write(&cal, CalData(now.ToUnixTimeSeconds(), now.ToUnixTimeMilliseconds(), sw.ElapsedTicks))
+        Threading.Volatile.Write(&cal, CalData(now.ToUnixTimeMilliseconds(), sw.ElapsedTicks))
 
     /// <summary>
     /// Current Unix timestamp in seconds (fast, cached).
@@ -39,10 +41,10 @@ module UnixTime =
     /// <returns>Unix seconds since epoch.</returns>
     let seconds () : int64 =
         let c = Threading.Volatile.Read(&cal)
-        let elapsed = (sw.ElapsedTicks - c.Ticks) / Stopwatch.Frequency
-        let result = c.Seconds + elapsed
+        let elapsedMs = (sw.ElapsedTicks - c.Ticks) * 1000L / Stopwatch.Frequency
+        let result = (c.Ms + elapsedMs) / 1000L
 
-        if elapsed > 60L then
+        if elapsedMs > 60000L then
             recalibrate ()
 
         result

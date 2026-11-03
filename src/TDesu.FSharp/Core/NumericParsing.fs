@@ -3,9 +3,9 @@ namespace TDesu.FSharp
 open System
 open System.Globalization
 
-// Every module here offers the same pair: `tryParse` returning an `option` and `tryParseV` returning a
-// `voption`. The pairing is not a preference, it is the convention this library already keeps elsewhere
-// — `Tasks/TaskOption.fs` sits beside `Tasks/TaskVOption.fs` — and the parsers were the one place that
+// Every module here offers `tryParse` returning an `option` and `tryParseV` returning a `voption`.
+// The pairing is not a preference, it is the convention this library already keeps elsewhere —
+// `Tasks/TaskOption.fs` sits beside `Tasks/TaskVOption.fs` — and the parsers were the one place that
 // offered only half of it.
 //
 // Which one to reach for: `option` composes with `List.choose`, `Option.map` and the rest of FSharp.Core,
@@ -14,20 +14,26 @@ open System.Globalization
 // noise anywhere else — and it does not compose with `List.choose`, so converting it back at a boundary
 // gives the allocation straight back.
 //
-// On culture. Integer parsing is culture-insensitive for the input these functions actually receive:
-// the default `NumberStyles.Integer` permits a sign and surrounding whitespace, and nothing else that a
-// locale can redefine, so those modules offer one parser and no variants. Floating point and the date
-// types are a different matter — the decimal separator and the date format are exactly what a locale
-// redefines — so each of those offers both, named the way this library already names the distinction in
-// `Char.toUpper`/`toUpperInv` and `String.toLower`/`toLowerInv`: the bare name follows the ambient
-// culture, the `Inv` suffix pins the invariant one.
+// On culture: the eight integer modules below (`SByte` through `UInt64`) parse against the invariant
+// culture outright and offer no ambient-following variant. `NumberStyles.Integer` lets a locale
+// redefine only the sign glyphs (`NumberFormatInfo.NegativeSign`/`PositiveSign`), and plenty of locales
+// do — `sv-SE`, `fi-FI`, every `ar-*` and `fa-*`, and 60-odd more use a sign other than the ASCII
+// `-`/`+`. Following the ambient culture there would make a plain `"-42"` silently fail to parse
+// depending on the host's locale, which is exactly the failure the rest of this file's `Inv` parsers
+// exist to avoid, so the integer modules skip the choice and are always invariant.
 //
-// Which to reach for is not a toss-up. Text that came from a machine — a database column, a JSON
-// number, a protocol field, a config value — is invariant by construction, and parsing it with
-// `tryParse` makes the result depend on the host: `Double.tryParse "1.5"` is `None` on every locale
-// whose decimal separator is a comma, which is most of Europe, and the failure surfaces as missing data
-// rather than as an error. Such a caller wants `tryParseInv`. `tryParse` is for text a person typed in
-// their own locale, which is the only case where the ambient culture is the question being asked.
+// Floating point and the date types are a different matter — the decimal separator and the date format
+// are exactly what a locale redefines for input a *person* typed — so each of those offers both an
+// ambient-following `tryParse` and an invariant `tryParseInv`, named the way this library already names
+// the distinction in `Char.toUpper`/`toUpperInv` and `String.toLower`/`toLowerInv`: the bare name
+// follows the ambient culture, the `Inv` suffix pins the invariant one.
+//
+// Which to reach for, for those: text that came from a machine — a database column, a JSON number, a
+// protocol field, a config value — is invariant by construction, and parsing it with `tryParse` makes
+// the result depend on the host: `Double.tryParse "1.5"` is `None` on every locale whose decimal
+// separator is a comma, which is most of Europe, and the failure surfaces as missing data rather than
+// as an error. Such a caller wants `tryParseInv`. `tryParse` is for text a person typed in their own
+// locale, which is the only case where the ambient culture is the question being asked.
 //
 // The `Inv` parsers also refuse group separators, which the ambient ones inherit from the BCL default.
 // Under the invariant culture the group separator is a comma, so allowing it would read `"1,5"` as
@@ -36,99 +42,131 @@ open System.Globalization
 
 [<RequireQualifiedAccess>]
 module SByte =
-    /// Parses a string as sbyte, returning <c>Some(value)</c> or <c>None</c>.
+    /// Parses a string as sbyte, returning <c>Some(value)</c> or <c>None</c>. Always culture-invariant
+    /// — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        SByte.TryParse(str) |> Option.ofCSharpTryPattern
+        SByte.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
 
-    /// Parses a string as sbyte, returning <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// Parses a string as sbyte, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. Always
+    /// culture-invariant — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        SByte.TryParse(str) |> ValueOption.ofCSharpTryPattern
+        SByte.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module Byte =
-    /// Parses a string as byte, returning <c>Some(value)</c> or <c>None</c>.
+    /// Parses a string as byte, returning <c>Some(value)</c> or <c>None</c>. Always culture-invariant
+    /// — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        Byte.TryParse(str) |> Option.ofCSharpTryPattern
+        Byte.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
 
-    /// Parses a string as byte, returning <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// Parses a string as byte, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. Always
+    /// culture-invariant — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        Byte.TryParse(str) |> ValueOption.ofCSharpTryPattern
+        Byte.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module Int16 =
-    /// Parses a string as int16, returning <c>Some(value)</c> or <c>None</c>.
+    /// Parses a string as int16, returning <c>Some(value)</c> or <c>None</c>. Always culture-invariant
+    /// — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        Int16.TryParse(str) |> Option.ofCSharpTryPattern
+        Int16.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
 
-    /// Parses a string as int16, returning <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// Parses a string as int16, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. Always
+    /// culture-invariant — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        Int16.TryParse(str) |> ValueOption.ofCSharpTryPattern
+        Int16.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module UInt16 =
-    /// Parses a string as uint16, returning <c>Some(value)</c> or <c>None</c>.
+    /// Parses a string as uint16, returning <c>Some(value)</c> or <c>None</c>. Always culture-invariant
+    /// — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        UInt16.TryParse(str) |> Option.ofCSharpTryPattern
+        UInt16.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
 
-    /// Parses a string as uint16, returning <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// Parses a string as uint16, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. Always
+    /// culture-invariant — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        UInt16.TryParse(str) |> ValueOption.ofCSharpTryPattern
+        UInt16.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module Int32 =
-    /// Parses a string as int32, returning <c>Some(value)</c> or <c>None</c>.
+    /// Parses a string as int32, returning <c>Some(value)</c> or <c>None</c>. Always culture-invariant
+    /// — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        Int32.TryParse(str) |> Option.ofCSharpTryPattern
+        Int32.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
 
-    /// Parses a string as int32, returning <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// Parses a string as int32, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. Always
+    /// culture-invariant — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        Int32.TryParse(str) |> ValueOption.ofCSharpTryPattern
+        Int32.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module UInt32 =
-    /// Parses a string as uint32, returning <c>Some(value)</c> or <c>None</c>.
+    /// Parses a string as uint32, returning <c>Some(value)</c> or <c>None</c>. Always culture-invariant
+    /// — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        UInt32.TryParse(str) |> Option.ofCSharpTryPattern
+        UInt32.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
 
-    /// Parses a string as uint32, returning <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// Parses a string as uint32, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. Always
+    /// culture-invariant — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        UInt32.TryParse(str) |> ValueOption.ofCSharpTryPattern
+        UInt32.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module Int64 =
-    /// Parses a string as int64, returning <c>Some(value)</c> or <c>None</c>.
+    /// Parses a string as int64, returning <c>Some(value)</c> or <c>None</c>. Always culture-invariant
+    /// — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        Int64.TryParse(str) |> Option.ofCSharpTryPattern
+        Int64.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
 
-    /// Parses a string as int64, returning <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// Parses a string as int64, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. Always
+    /// culture-invariant — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        Int64.TryParse(str) |> ValueOption.ofCSharpTryPattern
+        Int64.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module UInt64 =
-    /// Parses a string as uint64, returning <c>Some(value)</c> or <c>None</c>.
+    /// Parses a string as uint64, returning <c>Some(value)</c> or <c>None</c>. Always culture-invariant
+    /// — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParse (str: string) =
-        UInt64.TryParse(str) |> Option.ofCSharpTryPattern
+        UInt64.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> Option.ofCSharpTryPattern
 
-    /// Parses a string as uint64, returning <c>ValueSome(value)</c> or <c>ValueNone</c>.
+    /// Parses a string as uint64, returning <c>ValueSome(value)</c> or <c>ValueNone</c>. Always
+    /// culture-invariant — see the note at the top of this file.
     /// <param name="str">The string to parse.</param>
     let inline tryParseV (str: string) =
-        UInt64.TryParse(str) |> ValueOption.ofCSharpTryPattern
+        UInt64.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture)
+        |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
 module Single =
@@ -197,7 +235,7 @@ module Double =
 [<RequireQualifiedAccess>]
 module Decimal =
     [<Literal>]
-    let private invStyles = NumberStyles.Float
+    let private invStyles = NumberStyles.Float ||| NumberStyles.AllowTrailingSign
 
     /// Parses a string as decimal using the ambient culture, returning <c>Some(value)</c> or
     /// <c>None</c>. For text that came from a machine rather than from a person, use
@@ -265,18 +303,25 @@ module DateTime =
     let inline tryParseV (str: string) =
         DateTime.TryParse(str) |> ValueOption.ofCSharpTryPattern
 
-    /// Parses a string as DateTime against the invariant culture. This is the one to use for
-    /// machine-generated text, whose meaning must not depend on the host's locale.
+    /// Parses a string as DateTime against the invariant culture, using
+    /// <c>DateTimeStyles.RoundtripKind</c> so the result does not depend on the host's time zone: a
+    /// trailing <c>Z</c> converts to <c>Kind = Utc</c> with the clock value unchanged, and a string
+    /// with no zone info at all stays <c>Kind = Unspecified</c>, also with the clock value unchanged.
+    /// A string carrying a numeric offset is still converted to the host's local time, same as
+    /// <see cref="System.DateTime.Parse(string)"/> itself defines for round-tripping — use
+    /// <see cref="TDesu.FSharp.DateTimeOffset.tryParseInv"/> if the written offset itself must survive.
+    /// This is the one to use for machine-generated text.
     /// <param name="str">The string to parse.</param>
     let inline tryParseInv (str: string) =
-        DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
+        DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
         |> Option.ofCSharpTryPattern
 
-    /// Parses a string as DateTime against the invariant culture, returning <c>ValueSome(value)</c>
-    /// or <c>ValueNone</c>.
+    /// Parses a string as DateTime against the invariant culture, using
+    /// <c>DateTimeStyles.RoundtripKind</c> — see <see cref="tryParseInv"/> — returning
+    /// <c>ValueSome(value)</c> or <c>ValueNone</c>.
     /// <param name="str">The string to parse.</param>
     let inline tryParseInvV (str: string) =
-        DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
+        DateTime.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
         |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]
@@ -294,18 +339,21 @@ module DateTimeOffset =
     let inline tryParseV (str: string) =
         DateTimeOffset.TryParse(str) |> ValueOption.ofCSharpTryPattern
 
-    /// Parses a string as DateTimeOffset against the invariant culture. This is the one to use for
-    /// machine-generated text, whose meaning must not depend on the host's locale.
+    /// Parses a string as DateTimeOffset against the invariant culture, using
+    /// <c>DateTimeStyles.AssumeUniversal</c> so a string carrying no offset is assumed UTC rather
+    /// than the host's current offset; a string that does carry an offset keeps it unchanged. This is
+    /// the one to use for machine-generated text, whose meaning must not depend on the host.
     /// <param name="str">The string to parse.</param>
     let inline tryParseInv (str: string) =
-        DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
+        DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal)
         |> Option.ofCSharpTryPattern
 
-    /// Parses a string as DateTimeOffset against the invariant culture, returning
+    /// Parses a string as DateTimeOffset against the invariant culture, using
+    /// <c>DateTimeStyles.AssumeUniversal</c> — see <see cref="tryParseInv"/> — returning
     /// <c>ValueSome(value)</c> or <c>ValueNone</c>.
     /// <param name="str">The string to parse.</param>
     let inline tryParseInvV (str: string) =
-        DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.None)
+        DateTimeOffset.TryParse(str, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal)
         |> ValueOption.ofCSharpTryPattern
 
 [<RequireQualifiedAccess>]

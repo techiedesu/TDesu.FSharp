@@ -68,13 +68,6 @@ module Operators =
     let inline isNotNullRef<'T when 'T: not struct> (v: 'T) = obj.ReferenceEquals(v, null) |> not
 
     /// <summary>
-    /// Returns <c>true</c> if the reference-type value is not null.
-    /// </summary>
-    /// <param name="v">Reference-type value to check.</param>
-    [<Obsolete("Renamed to isNotNullRef, which pairs with isNullRef. This alias will be removed in 2.0.")>]
-    let inline isNotNull<'T when 'T: not struct> (v: 'T) = isNotNullRef v
-
-    /// <summary>
     /// Applies a side-effect action to a value, then returns the value unchanged.
     /// Useful for logging or debugging in a pipeline.
     /// </summary>
@@ -116,7 +109,8 @@ module Operators =
     let inline always x _ = x
 
     /// <summary>
-    /// Converts a <c>snake_case</c> string to <c>CamelCase</c>.
+    /// Converts a <c>snake_case</c> string to <c>CamelCase</c>, using invariant casing so a
+    /// Turkish-locale host does not turn an ASCII <c>i</c> into a dotted capital <c>İ</c>.
     /// </summary>
     /// <example>
     /// <code>
@@ -132,7 +126,7 @@ module Operators =
             let mutable prev = '_'
 
             for c in str do
-                let c = if prev = '_' then Char.ToUpper c else c
+                let c = if prev = '_' then Char.ToUpperInvariant c else c
 
                 if c <> '_' then
                     sb.Append(c) |> ignore
@@ -142,7 +136,8 @@ module Operators =
             sb.ToString()
 
     /// <summary>
-    /// Converts a <c>CamelCase</c> string to <c>snake_case</c>.
+    /// Converts a <c>CamelCase</c> string to <c>snake_case</c>, using invariant casing so a
+    /// Turkish-locale host does not turn an ASCII <c>I</c> into a dotless lowercase <c>ı</c>.
     /// </summary>
     /// <example>
     /// <code>
@@ -155,13 +150,13 @@ module Operators =
             str
         else
             let sb = System.Text.StringBuilder(str.Length + 4)
-            sb.Append(Char.ToLower str[0]) |> ignore
+            sb.Append(Char.ToLowerInvariant str[0]) |> ignore
 
             for i = 1 to str.Length - 1 do
                 let c = str[i]
 
                 if Char.IsUpper c then
-                    sb.Append('_').Append(Char.ToLower c) |> ignore
+                    sb.Append('_').Append(Char.ToLowerInvariant c) |> ignore
                 else
                     sb.Append(c) |> ignore
 
@@ -196,12 +191,6 @@ module Operators =
     /// <param name="t">Type to inspect.</param>
     let isValueOptionType (t: Type) =
         t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<voption<_>>
-
-    /// <summary>
-    /// Increments a byref numeric value in-place by one.
-    /// </summary>
-    /// <param name="a">Byref value to increment.</param>
-    let inline inc (a: 'a byref) = a <- a + LanguagePrimitives.GenericOne
 
     /// <summary>Unsafe cast like in C#.</summary>
     /// <param name="a">Value to cast.</param>
