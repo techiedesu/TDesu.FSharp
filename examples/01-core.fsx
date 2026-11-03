@@ -66,7 +66,6 @@ assertTrue "String.endsWithAnyChar checks several trailing chars" ("cat.gz" |> S
 assertEqual "Option.toResult Some -> Ok" (Ok 42) (Some 42 |> Option.toResult "missing")
 assertEqual "Option.toResult None -> Error" (Error "missing") (None |> Option.toResult "missing")
 assertEqual "Option.zip pairs two Somes" (Some(1, "a")) (Option.zip (Some 1) (Some "a"))
-assertEqual "Option.map2 combines two Somes" (Some 3) (Option.map2 (+) (Some 1) (Some 2))
 assertEqual "Option.ofString blank -> None" None (Option.ofString "   ")
 // tryCast is a type-guard cast: Some on a matching CLR type test, None otherwise -- including
 // for null, since a type test against null never succeeds. ofPredicate wraps a value in Some

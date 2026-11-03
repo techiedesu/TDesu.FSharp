@@ -26,7 +26,7 @@ type ParallelThrottleSafetyTests() =
 
         // ACT
         let act () =
-            Task.parallelThrottle 2 items f CancellationToken.None
+            Task.parallelThrottle 2 items CancellationToken.None f
             |> Task.getResult
             |> ignore
 
@@ -46,7 +46,7 @@ type ParallelThrottleSafetyTests() =
 
         // ACT
         let result =
-            Task.parallelThrottle 4 items (fun i -> task { return i }) CancellationToken.None
+            Task.parallelThrottle 4 items CancellationToken.None (fun i -> task { return i })
             |> Task.getResult
 
         // ASSERT
@@ -59,7 +59,7 @@ type ParallelThrottleSafetyTests() =
 
         // ACT
         let result =
-            Task.parallelThrottle 4 items (fun i -> task { return i }) CancellationToken.None
+            Task.parallelThrottle 4 items CancellationToken.None (fun i -> task { return i })
             |> Task.getResult
 
         // ASSERT
@@ -72,7 +72,7 @@ type ParallelThrottleSafetyTests() =
 
         // ACT
         let result =
-            Task.parallelThrottle 1 items (fun i -> task { return i * 10 }) CancellationToken.None
+            Task.parallelThrottle 1 items CancellationToken.None (fun i -> task { return i * 10 })
             |> Task.getResult
 
         // ASSERT
@@ -81,7 +81,7 @@ type ParallelThrottleSafetyTests() =
     [<Test>]
     member _.``maxConcurrent of zero throws synchronously instead of hanging forever``() =
         let act () =
-            Task.parallelThrottle 0 [ 1 ] (fun i -> task { return i }) CancellationToken.None
+            Task.parallelThrottle 0 [ 1 ] CancellationToken.None (fun i -> task { return i })
             |> ignore
 
         let ex = Assert.Throws<ArgumentException>(act)
@@ -90,7 +90,7 @@ type ParallelThrottleSafetyTests() =
     [<Test>]
     member _.``negative maxConcurrent throws synchronously``() =
         let act () =
-            Task.parallelThrottle -1 [ 1 ] (fun i -> task { return i }) CancellationToken.None
+            Task.parallelThrottle -1 [ 1 ] CancellationToken.None (fun i -> task { return i })
             |> ignore
 
         %Assert.Throws<ArgumentException>(act)
@@ -98,7 +98,7 @@ type ParallelThrottleSafetyTests() =
     [<Test>]
     member _.``parallelThrottleUnit also rejects a non-positive maxConcurrent synchronously``() =
         let act () =
-            Task.parallelThrottleUnit 0 [ 1 ] (fun _ -> task { return () }) CancellationToken.None
+            Task.parallelThrottleUnit 0 [ 1 ] CancellationToken.None (fun _ -> task { return () })
             |> ignore
 
         %Assert.Throws<ArgumentException>(act)
@@ -116,7 +116,7 @@ type ParallelThrottleSafetyTests() =
                     return i
                 }
 
-            let t = Task.parallelThrottle 2 [ 1; 2; 3 ] f cts.Token
+            let t = Task.parallelThrottle 2 [ 1; 2; 3 ] cts.Token f
 
             try
                 do! t :> Task
@@ -142,7 +142,7 @@ type ParallelThrottleSafetyTests() =
                     return i
                 }
 
-            let t = Task.parallelThrottle 1 [ 1; 2; 3; 4; 5 ] f cts.Token
+            let t = Task.parallelThrottle 1 [ 1; 2; 3; 4; 5 ] cts.Token f
 
             try
                 do! t :> Task
@@ -166,7 +166,7 @@ type ParallelThrottleSafetyTests() =
             }
 
         let act () =
-            Task.parallelThrottle 2 [ 1 ] failingItem CancellationToken.None
+            Task.parallelThrottle 2 [ 1 ] CancellationToken.None failingItem
             |> Task.getResult
             |> ignore
 

@@ -25,12 +25,12 @@ let private callTimeout = TimeSpan.FromSeconds(10.0)
 
 /// Wraps an HTTP call with timeout + circuit breaker + retry
 let private resilient
-    (cb: (unit -> Task<'T>) -> Task<'T>)
+    (cb: CircuitBreaker.Breaker)
     (parentCt: CancellationToken)
     (f: CancellationToken -> Task<'T>)
     : Task<'T> =
     Retry.withBackoff retryCount retryDelay parentCt (fun () ->
-        cb (fun () ->
+        cb.Run(fun () ->
             Timeout.afterLinked callTimeout parentCt f))
 
 // ── JSON helpers ──

@@ -1,3 +1,82 @@
+## 3.0.0
+
+A full review of the library, every finding reproduced against 2.2.0 before it was fixed and
+pinned by a test that fails on 2.2.0. Major version because several fixes change behaviour a caller
+could have depended on, and misleading or duplicate API is removed.
+
+### Breaking
+- `option {}`: `Return` no longer turns a null into `None` (`return ()` was `None`, so every
+  successful unit pipeline read as a failure); `Zero` is `Some ()` and `Combine` short-circuits on
+  `None`, so an early `return! None` / `do! None` now stops the workflow instead of being skipped.
+  `if c then return v` without `else` no longer compiles, as in `result {}`.
+- `taskResult {}` always returns a `Task`: an exception in the synchronous prefix faults it instead
+  of escaping at construction.
+- `ValueStringBuilder.ToString()` no longer disposes; the caller owns exactly one `Dispose`. With the
+  old behaviour a `let` (not `let mutable`) builder returned its pooled array twice, and two later
+  renters shared one buffer.
+- `CircuitBreaker.create` returns a `Breaker` with a generic `Run<'T>`, so one breaker guards calls
+  of any result type (`breaker (fun () -> …)` → `breaker.Run(fun () -> …)`); `State` is internal.
+- `Task.parallelThrottle` / `parallelThrottleUnit` take a `CancellationToken` before the work
+  function (`maxConcurrent items ct f`) and reject `maxConcurrent <= 0` (0 used to hang forever).
+- `CancellationToken.linked` returns one `CancellationTokenSource` instead of a tuple whose second
+  half leaked its timer when not disposed.
+- Integer `tryParse`/`tryParseV` are culture-invariant: under a locale whose negative sign is not
+  `-` (66 of them, e.g. `ar-001`), `Int64.tryParse "-42"` was `None`.
+- `String.startsWith` / `endsWith` / `startsWithAny` (and the `String.StartsWithAny` pattern) are
+  ordinal, like their siblings; `startsWith "\u200d" "abc"` was `true`.
+- `DateTime.tryParseInv*` keep `Z` as UTC (`RoundtripKind`) instead of converting to host-local
+  time; `DateTimeOffset.tryParseInv*` assume UTC for an offset-less string instead of the host's
+  offset. `Decimal.tryParseInv*` accept a trailing sign.
+- `Bytes.xor` throws on arrays of different lengths instead of silently truncating.
+- `Retry.withBackoff` / `withDelay` reject a negative delay (it meant an infinite wait), cap the
+  backoff at `Retry.maxBackoffDelay` (1 min), and no longer retry a cancellation: the caller's own
+  token cancels, a foreign one faults with `InvalidOperationException` (the OCE inside).
+  `tryWithBackoff` propagates the caller's cancellation instead of returning it as `Error`.
+- `Task.map` / `bind` on a completed input rethrow the original cancellation exception, as the
+  builder path always did.
+- `Result.requireNotNull` is constrained to reference types (a struct could never fail it).
+- Removed: `Operators.isNotNull` (obsolete since 1.x, use `isNotNullRef`), `Operators.inc` (use
+  `Byref.inc`), `Option.map2`/`map3` (FSharp.Core has them).
+- `ResizeArray.sortBy` is stable and projects each element once.
+
+### Fixed
+- `Task.runSynchronously` no longer swallows a fault or cancellation that happened before the call.
+- `PeriodicTimer.run/start/startCounted/startImmediate` yield when the pause is zero (a synchronous
+  step used to run the loop on the caller's thread forever), and a throwing `onError` no longer
+  removes the pause. `startCounted` advances its index on failed ticks too.
+- `TaskGroup` treats only its own cancellation as quiet; a foreign one is a failure. `Token` is
+  readable after `Dispose`; task tracking is thread-safe.
+- `ChannelWorker`: `startBounded` disposes its token registration; `Post` after shutdown drops the
+  item; `onError` is not called for an ordinary cancellation.
+- `SlidingWindowLimiter` is a real sliding window (it was a fixed window admitting 2× the limit at
+  a boundary); `Count` respects the clock.
+- `CircuitBreaker`: a call that started before the circuit opened no longer re-closes it when it
+  succeeds afterwards; half-open admits exactly one probe.
+- `Timeout.after/afterLinked` decide own timeout vs caller cancellation by the exception's token.
+  They are cooperative, and the docs now say so.
+- `Memoize`: `withTtl` stamps an entry when the factory finishes, not when it starts (a factory
+  slower than the TTL never cached); `create` and the async variants no longer allocate on a hit;
+  TTL uses a monotonic clock.
+- `UnixTime.seconds()` disagreed with `milliseconds()` about half the time, running a second behind.
+- `Union.caseNames` returns a copy (the cached array could be corrupted by a caller);
+  `caseName` no longer boxes struct unions.
+- `String.replaceEndLines "\r\n"` no longer triples line breaks; `truncate` no longer splits a
+  surrogate pair; identifier case conversion is culture-invariant.
+- `DeferStack.Dispose` is idempotent; aggregated dispose errors keep occurrence order.
+- `Hash.ofSeq/ofArray/ofList` and the `CollectionComparer`s treat null as empty instead of throwing.
+- `TemporaryFileStream` uses `DeleteOnClose` (a missed `Dispose` no longer leaks the file) and
+  forwards the span/memory/async overloads. `Stream.copyUpTo` no longer reads far past a small cap.
+- `ArrayPool.withCopy` returns its buffer when the copy throws. `Numeric.lerp 1e16 1.0 1.0` is `1.0`.
+- `Validation.valueOrFail` puts the errors in the exception message.
+- `Retry` and `CircuitBreaker` keep the original stack trace.
+
+### Added
+- `ArrayPool.useBytesClearing` / `usePooledClearing` / `withCopyClearing` / `returnBytesClearing`,
+  which zero the array on return — for key material.
+- `Parse.DoubleInv` / `DecimalInv` / `SingleInv` / `DateTimeInv` / `DateTimeOffsetInv` patterns.
+- `For` and `While` in `result {}`, `option {}` and `taskResult {}`.
+- `Retry.maxBackoffDelay`, `Retry.backoffDelay`.
+
 ## 2.2.0
 
 ### Added

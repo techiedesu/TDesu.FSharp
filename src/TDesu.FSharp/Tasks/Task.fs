@@ -64,13 +64,13 @@ module Task =
     /// <exception cref="ArgumentException"><paramref name="maxConcurrent"/> is not positive.</exception>
     /// <param name="maxConcurrent">Maximum number of tasks allowed to run concurrently. Must be positive.</param>
     /// <param name="items">The input sequence of items to process. Null is treated as empty.</param>
-    /// <param name="f">Async function applied to each item.</param>
     /// <param name="ct">Observed before each item is dequeued and while waiting for a throttle slot.</param>
+    /// <param name="f">Async function applied to each item.</param>
     let parallelThrottle
         (maxConcurrent: int)
         (items: 'T seq)
-        (f: 'T -> Task<'TResult>)
         (ct: CancellationToken)
+        (f: 'T -> Task<'TResult>)
         : Task<'TResult[]> =
         if maxConcurrent <= 0 then
             invalidArg (nameof maxConcurrent) $"Must be positive, got %d{maxConcurrent}"
@@ -124,13 +124,13 @@ module Task =
     /// <exception cref="ArgumentException"><paramref name="maxConcurrent"/> is not positive.</exception>
     /// <param name="maxConcurrent">Maximum number of tasks allowed to run concurrently. Must be positive.</param>
     /// <param name="items">The input sequence of items to process. Null is treated as empty.</param>
-    /// <param name="f">Async function applied to each item.</param>
     /// <param name="ct">Observed before each item is dequeued and while waiting for a throttle slot.</param>
+    /// <param name="f">Async function applied to each item.</param>
     let parallelThrottleUnit
         (maxConcurrent: int)
         (items: 'T seq)
-        (f: 'T -> Task<unit>)
         (ct: CancellationToken)
+        (f: 'T -> Task<unit>)
         : Task<unit> =
         if maxConcurrent <= 0 then
             invalidArg (nameof maxConcurrent) $"Must be positive, got %d{maxConcurrent}"

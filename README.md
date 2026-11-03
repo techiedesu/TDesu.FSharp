@@ -130,7 +130,6 @@ Some 42 |> Option.toResult "missing"   // Ok 42
 None    |> Option.toResult "missing"   // Error "missing"
 
 Option.zip (Some 1) (Some "a")          // Some (1, "a")
-Option.map2 (+) (Some 1) (Some 2)       // Some 3
 Some 42 |> Option.tee (printfn "got %d") // prints, returns Some 42
 
 Option.ofString "hello"   // Some "hello"
@@ -201,7 +200,7 @@ task { return riskyOp() } |> Task.catch       // Task<Result<_, exn>>
 Task.fireAndForget (fun ex -> log.Error(ex)) (fun () -> sendEmail())
 
 // Throttled parallelism
-Task.parallelThrottle 5 urls (fun url -> httpClient.GetAsync(url))
+Task.parallelThrottle 5 urls ct (fun url -> httpClient.GetAsync(url, ct))
 
 // A loop instead of a recursive task: `return! step next` is not a tail call and keeps one
 // state machine per iteration alive; Task.loop runs the step from one while
@@ -428,7 +427,7 @@ let! result = Retry.withBackoff 3 (TimeSpan.FromMilliseconds 500.0) ct (fun () -
 
 // Circuit breaker
 let breaker = CircuitBreaker.create { Threshold = 5; Cooldown = TimeSpan.FromSeconds 30.0 }
-let! data = breaker (fun () -> callExternalApi())
+let! data = breaker.Run(fun () -> callExternalApi())
 
 // Timeout with cancellation
 let! data = Timeout.afterLinked (TimeSpan.FromSeconds 10.0) ct (fun ct ->

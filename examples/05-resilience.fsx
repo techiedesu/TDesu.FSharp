@@ -55,7 +55,7 @@ let failing () : Task<int> =
 
 let attempt () =
     try
-        breaker failing |> Task.getResult |> ignore
+        breaker.Run failing |> Task.getResult |> ignore
         true
     with _ ->
         false

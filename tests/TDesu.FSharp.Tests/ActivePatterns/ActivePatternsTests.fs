@@ -216,3 +216,18 @@ type RefPatternTests() =
 
         isTrue (matches null)
         isFalse (matches (box 1))
+
+[<TestFixture>]
+type StartsWithAnyPatternTests() =
+
+    [<Test>]
+    member _.``StartsWithAny is an ordinal prefix test: a zero-width joiner before the prefix is not ignored``() =
+        match "\u200dconfig.json" with
+        | String.StartsWithAny [| "config" |] -> Assert.Fail("a culture-aware comparison matched")
+        | _ -> ()
+
+    [<Test>]
+    member _.``StartsWithAny matches an ordinary prefix``() =
+        match "config.json" with
+        | String.StartsWithAny [| "settings"; "config" |] -> ()
+        | _ -> Assert.Fail("expected a match")

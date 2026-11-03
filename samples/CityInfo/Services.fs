@@ -80,7 +80,7 @@ module CityInfoService =
             |]
 
             let! results =
-                Task.parallelThrottle 3 providers (fun (name, f) -> task {
+                Task.parallelThrottle 3 providers ct (fun (name, f) -> task {
                     try
                         let! r = f ct
                         return Some (name, r)
